@@ -768,7 +768,7 @@ namespace TPShipToolkit.MsbData
             {
                 reader.BaseStream.Seek(4, SeekOrigin.Current);
                 meshscenetype = reader.ReadUInt32();
-                _type = (MeshSceneType)meshscenetype;
+                _type = FindMeshSceneType(meshscenetype);
             }
             catch
             {
@@ -1286,6 +1286,16 @@ namespace TPShipToolkit.MsbData
             {
                 animation.UpdateMotionNode();
             }
+        }
+
+        private MeshSceneType FindMeshSceneType(uint meshSceneType)
+        {
+            return meshSceneType switch
+            {
+                0 => MeshSceneType.ShipIslandPlanetAnimals,
+                1 => MeshSceneType.GunAndBullet,
+                _ => MeshSceneType.ShipIslandPlanetAnimals
+            };
         }
 
         private AttributeName GetAttributeName(string attributeName)
