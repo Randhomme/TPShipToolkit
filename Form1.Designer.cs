@@ -458,8 +458,7 @@
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.Items.AddRange(new object[] {
             "Ship/Island/Planet/Animal",
-            "Gun",
-            "Bullet"});
+            "Gun/Bullet"});
             this.comboBox1.Location = new System.Drawing.Point(222, 8);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(722, 21);
