@@ -3,6 +3,6 @@
     public enum MeshSceneType
     {
         ShipIslandPlanetAnimals,
-        GunAndBullet,
+        GunAndBullet
     }
 }
