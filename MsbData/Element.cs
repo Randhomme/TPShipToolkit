@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
@@ -38,7 +38,9 @@ namespace TPShipToolkit.MsbData
             get => _name.ToString();
             set
             {
-                if (_elementsName != null)
+                if (value == "None")
+                    throw new ArgumentException("This name is used by the program. It's better to not use it.");
+                else if (_elementsName != null)
                 {
                     //check if the name isn't already in the list
                     bool contains = false;
@@ -123,7 +125,7 @@ namespace TPShipToolkit.MsbData
                 {
                     if (_elementsName[i].ToString().Equals(parentname))
                     {
-                        return (uint)i;
+                        return (uint)i-1;
                     }
                 }
             }
