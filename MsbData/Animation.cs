@@ -127,5 +127,10 @@ namespace TPShipToolkit.MsbData
                 _name.Append(nodeName + "_" + (maxNodeNumber + 1));
             }
         }
+
+        public override string ToString()
+        {
+            return _name.ToString();
+        }
     }
 }
