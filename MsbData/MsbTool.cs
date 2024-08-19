@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -16,9 +16,7 @@ namespace TPShipToolkit.MsbData
         private readonly List<Element> _meshes = new List<Element>();
         private readonly List<Bone> _bones = new List<Bone>();
         private readonly List<Animation> _animations = new List<Animation>();
-        private readonly List<StringBuilder> _elementsName = new List<StringBuilder>();
-        //private BinaryReader reader;
-        //private BinaryWriter writer;
+        private readonly List<StringBuilder> _elementsName = new List<StringBuilder>() { new("None") };
 
         public MeshSceneType GetMeshSceneType()
         {
@@ -80,6 +78,7 @@ namespace TPShipToolkit.MsbData
             {
                 using (BinaryReader reader = new BinaryReader(File.OpenRead(path)))
                 {
+                    _parentcount = _elementsName.Count;
                     reader.BaseStream.Seek(0, SeekOrigin.Begin);
                     ReadHeaderData(reader, logs);
                     ImportNodes(reader, treeView, logs);
@@ -88,7 +87,6 @@ namespace TPShipToolkit.MsbData
                     ImportAnimations(reader, treeView, logs);
                     UpdateParentName();
                     reader?.Dispose();
-                    _parentcount += _elementsName.Count;
                 }
             }
             catch(Exception ex)
@@ -1342,7 +1340,7 @@ namespace TPShipToolkit.MsbData
         public void AddNode(string nodeName)
         {
             StringBuilder name = new StringBuilder(nodeName);
-            _elementsName.Insert(_nodes.Count, name);
+            _elementsName.Insert(1 + _nodes.Count, name);
             _nodes.Add(new Element(_elementsName, name));
         }
 
@@ -1353,7 +1351,7 @@ namespace TPShipToolkit.MsbData
         public void AddMesh(string meshName)
         {
             StringBuilder name = new StringBuilder(meshName);
-            _elementsName.Insert(_nodes.Count + _meshes.Count, name);
+            _elementsName.Insert(1 + _nodes.Count + _meshes.Count, name);
             _meshes.Add(new Element(_elementsName, name));
         }
 
@@ -1364,7 +1362,7 @@ namespace TPShipToolkit.MsbData
         public void AddBone(string boneName)
         {
             StringBuilder name = new StringBuilder(boneName);
-            _elementsName.Insert(_nodes.Count + _meshes.Count + _bones.Count, name);
+            _elementsName.Insert(1 + _nodes.Count + _meshes.Count + _bones.Count, name);
             _bones.Add(new Bone(_elementsName, name));
         }
 
@@ -1375,7 +1373,7 @@ namespace TPShipToolkit.MsbData
         public void AddAnimation(string animationName)
         {
             StringBuilder name = new StringBuilder(animationName);
-            _elementsName.Insert(_nodes.Count + _meshes.Count + _bones.Count + _animations.Count, name);
+            _elementsName.Insert(1 + _nodes.Count + _meshes.Count + _bones.Count + _animations.Count, name);
             _animations.Add(new Animation(_elementsName, name));
         }
     }
