@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
@@ -26,37 +26,27 @@ namespace TPShipToolkit.Dialogs
         private bool CanAdd(string name)
         {
             foreach (StringBuilder s in _elementsName)
-            {
                 if (s.ToString().Equals(name))
-                {
                     return false;
-                }
-            }
             return true;
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            if (CanAdd(textBox1.Text))
-            {
+            if (textBox1.Text == "None")
+                MessageBox.Show("This name is used by the program. It's better to not use it.");
+            else if (CanAdd(textBox1.Text))
                 this.DialogResult = DialogResult.OK;
-            }
             else
-            {
                 MessageBox.Show("An element with the same name already exists.");
-            }
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(textBox1.Text))
-            {
                 button2.Enabled = false;
-            }
             else
-            {
                 button2.Enabled = true;
-            }
         }
     }
 }
