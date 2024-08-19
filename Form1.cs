@@ -530,5 +530,10 @@ namespace TPShipToolkit
             treeView1.SelectedNode = parentNodes[selectedNodeIndex - 1];
             treeView1.Focus();
         }
+
+        private void propertyGrid1_PropertyValueChanged(object s, PropertyValueChangedEventArgs e)
+        {
+            treeView1.SelectedNode.Text = propertyGrid1.SelectedObject.ToString();
+        }
     }
 }
