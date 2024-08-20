@@ -546,7 +546,7 @@ namespace TPShipToolkit
             };
             if (fbd.ShowDialog() == DialogResult.OK)
             {
-                settings.TextureDirectory = fbd.SelectedPath;
+                settings.TextureDirectory = fbd.SelectedPath + "\\";
             }
         }
     }
