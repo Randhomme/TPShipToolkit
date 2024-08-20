@@ -116,22 +116,6 @@ namespace TPShipToolkit.MsbData
             return null;
         }
 
-        public uint GetParentId()
-        {
-            if(_parentName!=null)
-            {
-                string parentname = _parentName.ToString();
-                for (int i = 0; i < _elementsName.Count; i++)
-                {
-                    if (_elementsName[i].ToString().Equals(parentname))
-                    {
-                        return (uint)i-1;
-                    }
-                }
-            }
-            return 0xFFFFFFFF;
-        }
-
         //Using this to rename if needed and avoid an other and unecessary check from the public setter of Name
         public void ProcessName()
         {
