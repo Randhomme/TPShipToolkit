@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 using TPShipToolkit.Enums;
@@ -312,7 +311,8 @@ namespace TPShipToolkit.MsbData
 
                             //parent id
                             writer.Write(5);
-                            writer.Write(node.GetParentId());
+                            //writer.Write(node.GetParentId());
+                            writer.Write(GetNewParentId(node));
 
                             //type
                             writer.Write(6);
@@ -412,7 +412,8 @@ namespace TPShipToolkit.MsbData
 
                             //parent id
                             writer.Write(d);
-                            writer.Write(mesh.GetParentId());
+                            //writer.Write(mesh.GetParentId());
+                            writer.Write(GetNewParentId(mesh));
 
                             //type
                             writer.Write(d + 1);
@@ -511,7 +512,8 @@ namespace TPShipToolkit.MsbData
 
                             //parent id
                             writer.Write(d);
-                            writer.Write(bone.GetParentId());
+                            //writer.Write(bone.GetParentId());
+                            writer.Write(GetNewParentId(bone));
 
                             //type
                             writer.Write(d + 1);
@@ -634,7 +636,8 @@ namespace TPShipToolkit.MsbData
                             {
                                 //node id
                                 writer.Write(c + 4);
-                                writer.Write(motion.GetParentId());
+                                //writer.Write(motion.GetParentId());
+                                writer.Write(GetNewParentId(motion));
 
                                 //motion definition
                                 writer.Write(c + 5);
@@ -788,7 +791,6 @@ namespace TPShipToolkit.MsbData
                 throw new Exception("Failed to read the node count.\n");
             }
 
-            //MessageBox.Show(nodeCount.ToString());
             //node loop
             for (uint i = 0; i < nodeCount; i++)
             {
@@ -805,7 +807,9 @@ namespace TPShipToolkit.MsbData
 
                     //parent id
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    node.ParentId = reader.ReadInt32() + _parentcount;
+                    node.ParentId = reader.ReadInt32();
+                    if (node.ParentId >= 0)
+                        node.ParentId += _parentcount;
 
                     //type (00 for node)
                     reader.BaseStream.Seek(8, SeekOrigin.Current);
@@ -915,7 +919,9 @@ namespace TPShipToolkit.MsbData
 
                     //parent id
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    mesh.ParentId = reader.ReadInt32() + _parentcount;
+                    mesh.ParentId = reader.ReadInt32();
+                    if (mesh.ParentId >= 0)
+                        mesh.ParentId += _parentcount;
 
                     //type (00 for node)
                     reader.BaseStream.Seek(8, SeekOrigin.Current);
@@ -1025,7 +1031,9 @@ namespace TPShipToolkit.MsbData
 
                     //parent id
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    bone.ParentId = reader.ReadInt32() + _parentcount;
+                    bone.ParentId = reader.ReadInt32();
+                    if (bone.ParentId >= 0)
+                        bone.ParentId += _parentcount;
 
                     //type
                     reader.BaseStream.Seek(8, SeekOrigin.Current);
@@ -1168,7 +1176,9 @@ namespace TPShipToolkit.MsbData
 
                             //node id
                             reader.BaseStream.Seek(4, SeekOrigin.Current);
-                            motion.NodeId = reader.ReadInt32() + _parentcount;
+                            motion.NodeId = reader.ReadInt32();
+                            if (motion.NodeId >= 0)
+                                motion.NodeId += _parentcount;
 
                             //node definition
                             reader.BaseStream.Seek(8, SeekOrigin.Current);
@@ -1176,8 +1186,6 @@ namespace TPShipToolkit.MsbData
                             //channel loop
                             for (int k = 0; k < 6; k++)
                             {
-                                //Channel channel = new Channel();
-                                //motion.Channels[k] = channel;
                                 try
                                 {
                                     //channel definition
@@ -1236,7 +1244,6 @@ namespace TPShipToolkit.MsbData
 
                                         //add the keyframe to the channel
                                         motion.AddKeyframe(k, keyframe);
-                                        //channel.AddKeyframe(keyframe);
                                     }
                                 }
                                 catch
@@ -1284,6 +1291,40 @@ namespace TPShipToolkit.MsbData
             {
                 animation.UpdateMotionNode();
             }
+        }
+
+        private int GetNewParentId(Element element)
+        {
+            for(int i = 0; i < _nodes.Count; i++)
+                if (element.ParentName.Equals(_nodes[i].Name))
+                    return i;
+            for (int i = 0; i < _meshes.Count; i++)
+                if (element.ParentName.Equals(_meshes[i].Name))
+                    return i + _nodes.Count;
+            for (int i = 0; i < _bones.Count; i++)
+                if (element.ParentName.Equals(_bones[i].Name))
+                    return i + _nodes.Count + _meshes.Count;
+            for (int i = 0; i < _animations.Count; i++)
+                if (element.ParentName.Equals(_animations[i].Name))
+                    return i + _nodes.Count + _meshes.Count + _bones.Count;
+            return -1;
+        }
+
+        private int GetNewParentId(Motion motion)
+        {
+            for (int i = 0; i < _nodes.Count; i++)
+                if (motion.Node.Equals(_nodes[i].Name))
+                    return i;
+            for (int i = 0; i < _meshes.Count; i++)
+                if (motion.Node.Equals(_meshes[i].Name))
+                    return i + _nodes.Count;
+            for (int i = 0; i < _bones.Count; i++)
+                if (motion.Node.Equals(_bones[i].Name))
+                    return i + _nodes.Count + _meshes.Count;
+            for (int i = 0; i < _animations.Count; i++)
+                if (motion.Node.Equals(_animations[i].Name))
+                    return i + _nodes.Count + _meshes.Count + _bones.Count;
+            return -1;
         }
 
         private MeshSceneType FindMeshSceneType(uint meshSceneType)
