@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using TPShipToolkit.Dialogs;
@@ -13,8 +14,8 @@ namespace TPShipToolkit
 {
     public partial class Form1 : Form
     {
-        private AppSettings settings;
-        private MsbTool msbTool = new MsbTool();
+        public static AppSettings settings;
+        private readonly MsbTool msbTool = new MsbTool();
         public Form1()
         {
             //To get exceptions message in English
@@ -533,7 +534,20 @@ namespace TPShipToolkit
 
         private void propertyGrid1_PropertyValueChanged(object s, PropertyValueChangedEventArgs e)
         {
+            //MessageBox.Show("test");
             treeView1.SelectedNode.Text = propertyGrid1.SelectedObject.ToString();
+        }
+
+        private void textureToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var fbd = new FolderBrowserDialog
+            {
+                Description = "Select the textures folder."
+            };
+            if (fbd.ShowDialog() == DialogResult.OK)
+            {
+                settings.TextureDirectory = fbd.SelectedPath;
+            }
         }
     }
 }
