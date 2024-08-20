@@ -65,22 +65,6 @@ namespace TPShipToolkit.MsbData
             return null;
         }
 
-        public uint GetParentId()
-        {
-            if (_parentName != null)
-            {
-                string parentname = _parentName.ToString();
-                for (int i = 0; i < _elementsName.Count; i++)
-                {
-                    if (_elementsName[i].ToString().Equals(parentname))
-                    {
-                        return (uint)i;
-                    }
-                }
-            }
-            return 0xFFFFFFFF;
-        }
-
         public override string ToString()
         {
             return _parentName != null ? _parentName.ToString() : "Motion";
