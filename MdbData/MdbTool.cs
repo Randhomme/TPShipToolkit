@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -757,7 +757,7 @@ namespace TPShipToolkit.MdbData
                     writer.WriteLine("Ks 0.000000 0.000000 0.000000");
                     writer.WriteLine("illum 2");
                     writer.WriteLine("Ns 8.000000");
-                    writer.WriteLine("map_Kd " + Path.ChangeExtension(mat.TexName, "dds"));
+                    writer.WriteLine("map_Kd " + Form1.settings.TextureDirectory + "\\" + Path.ChangeExtension(mat.TexName, "dds"));
                     writer.WriteLine();
                 }
             }
