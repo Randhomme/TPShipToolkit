@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using TPShipToolkit.Enums;
 
 namespace TPShipToolkit.MsbData
@@ -298,7 +299,7 @@ namespace TPShipToolkit.MsbData
                         try
                         {
                             Element node = _nodes[i];
-                            logs.Report("Writting node " + node.Name + "... ");
+                            logs.Report("Writting node " + node.DisplayedName + "... ");
 
                             //nodes element
                             writer.Write(4);
@@ -320,8 +321,8 @@ namespace TPShipToolkit.MsbData
 
                             //name
                             writer.Write(1);
-                            writer.Write(node.Name.Length);
-                            writer.Write(Encoding.Default.GetBytes(node.Name));
+                            writer.Write(node.RealName.Length);
+                            writer.Write(Encoding.Default.GetBytes(node.RealName));
 
                             //pivot position
                             writer.Write(7);
@@ -399,7 +400,7 @@ namespace TPShipToolkit.MsbData
                         try
                         {
                             Element mesh = _meshes[i];
-                            logs.Report("Writting mesh " + mesh.Name + "... ");
+                            logs.Report("Writting mesh " + mesh.DisplayedName + "... ");
 
                             //meshes - element
                             writer.Write(a + 1);
@@ -421,8 +422,8 @@ namespace TPShipToolkit.MsbData
 
                             //name
                             writer.Write(1);
-                            writer.Write(mesh.Name.Length);
-                            writer.Write(Encoding.Default.GetBytes(mesh.Name));
+                            writer.Write(mesh.RealName.Length);
+                            writer.Write(Encoding.Default.GetBytes(mesh.RealName));
 
                             //pivot position
                             writer.Write(d + 2);
@@ -499,7 +500,7 @@ namespace TPShipToolkit.MsbData
                         try
                         {
                             Bone bone = _bones[i];
-                            logs.Report("Writting bone " + bone.Name + "... ");
+                            logs.Report("Writting bone " + bone.DisplayedName + "... ");
 
                             //bones - element
                             writer.Write(b + 1);
@@ -521,8 +522,8 @@ namespace TPShipToolkit.MsbData
 
                             //name
                             writer.Write(1);
-                            writer.Write(bone.Name.Length);
-                            writer.Write(Encoding.Default.GetBytes(bone.Name));
+                            writer.Write(bone.RealName.Length);
+                            writer.Write(Encoding.Default.GetBytes(bone.RealName));
 
                             //pivot position
                             writer.Write(d + 2);
@@ -611,7 +612,7 @@ namespace TPShipToolkit.MsbData
                         try
                         {
                             Animation animation = _animations[i];
-                            logs.Report("Writting animation " + animation.Name + "... ");
+                            logs.Report("Writting animation " + animation.DisplayedName + "... ");
 
                             //animations - element
                             writer.Write(c + 1);
@@ -620,8 +621,8 @@ namespace TPShipToolkit.MsbData
 
                             //name
                             writer.Write(1);
-                            writer.Write(animation.Name.Length);
-                            writer.Write(Encoding.Default.GetBytes(animation.Name));
+                            writer.Write(animation.RealName.Length);
+                            writer.Write(Encoding.Default.GetBytes(animation.RealName));
 
                             //duration
                             writer.Write(c + 2);
@@ -817,8 +818,8 @@ namespace TPShipToolkit.MsbData
                     //name
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
                     stringlength = reader.ReadUInt32();
-                    //MessageBox.Show(""+stringlength);
                     name.Append(new string(reader.ReadChars((int)stringlength)));
+                    node.RealName = name.ToString();
 
                     //pivot position
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
@@ -879,8 +880,8 @@ namespace TPShipToolkit.MsbData
                     node.ProcessName();
                     _nodes.Add(node);
                     _elementsName.Add(name);
+                    treeView.Invoke(() => treeView.Nodes[0].Nodes.Add(node.DisplayedName));
                     logs.Report("Adding node " + name + "\n");
-                    treeView.Invoke(() => treeView.Nodes[0].Nodes.Add(node.Name));
                 }
                 catch
                 {
@@ -930,6 +931,7 @@ namespace TPShipToolkit.MsbData
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
                     stringlength = reader.ReadUInt32();
                     name.Append(new string(reader.ReadChars((int)stringlength)));
+                    mesh.RealName = name.ToString();
 
                     //pivot position
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
@@ -990,8 +992,8 @@ namespace TPShipToolkit.MsbData
                     mesh.ProcessName();
                     _meshes.Add(mesh);
                     _elementsName.Add(name);
-                    logs.Report("Adding mesh " + mesh.Name + "\n");
-                    treeView.Invoke(() => treeView.Nodes[1].Nodes.Add(mesh.Name));
+                    treeView.Invoke(() => treeView.Nodes[1].Nodes.Add(mesh.DisplayedName));
+                    logs.Report("Adding mesh " + name + "\n");
                 }
                 catch
                 {
@@ -1041,8 +1043,8 @@ namespace TPShipToolkit.MsbData
                     //name
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
                     stringlength = reader.ReadUInt32();
-                    //MessageBox.Show(""+stringlength);
                     name.Append(new string(reader.ReadChars((int)stringlength)));
+                    bone.RealName = name.ToString();
 
                     //pivot position
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
@@ -1112,8 +1114,8 @@ namespace TPShipToolkit.MsbData
                     bone.ProcessName();
                     _bones.Add(bone);
                     _elementsName.Add(name);
-                    treeView.Invoke(() => treeView.Nodes[2].Nodes.Add(bone.Name));
-                    logs.Report("Adding bone " + bone.Name + "\n");
+                    treeView.Invoke(() => treeView.Nodes[2].Nodes.Add(bone.DisplayedName));
+                    logs.Report("Adding bone " + name + "\n");
                 }
                 catch
                 {
@@ -1151,6 +1153,7 @@ namespace TPShipToolkit.MsbData
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
                     stringlength = reader.ReadUInt32();
                     name.Append(new string(reader.ReadChars((int)stringlength)));
+                    animation.RealName = name.ToString();
 
                     //duration
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
@@ -1263,8 +1266,8 @@ namespace TPShipToolkit.MsbData
                     animation.ProcessName();
                     _animations.Add(animation);
                     _elementsName.Add(name);
-                    logs.Report("Adding animation " + animation.Name + "\n");
-                    treeView.Invoke(() => treeView.Nodes[3].Nodes.Add(animation.Name));
+                    logs.Report("Adding animation " + name + "\n");
+                    treeView.Invoke(() => treeView.Nodes[3].Nodes.Add(animation.DisplayedName));
                 }
                 catch
                 {
@@ -1296,16 +1299,16 @@ namespace TPShipToolkit.MsbData
         private int GetNewParentId(Element element)
         {
             for(int i = 0; i < _nodes.Count; i++)
-                if (element.ParentName.Equals(_nodes[i].Name))
+                if (element.ParentName.Equals(_nodes[i].DisplayedName))
                     return i;
             for (int i = 0; i < _meshes.Count; i++)
-                if (element.ParentName.Equals(_meshes[i].Name))
+                if (element.ParentName.Equals(_meshes[i].DisplayedName))
                     return i + _nodes.Count;
             for (int i = 0; i < _bones.Count; i++)
-                if (element.ParentName.Equals(_bones[i].Name))
+                if (element.ParentName.Equals(_bones[i].DisplayedName))
                     return i + _nodes.Count + _meshes.Count;
             for (int i = 0; i < _animations.Count; i++)
-                if (element.ParentName.Equals(_animations[i].Name))
+                if (element.ParentName.Equals(_animations[i].DisplayedName))
                     return i + _nodes.Count + _meshes.Count + _bones.Count;
             return -1;
         }
@@ -1313,16 +1316,16 @@ namespace TPShipToolkit.MsbData
         private int GetNewParentId(Motion motion)
         {
             for (int i = 0; i < _nodes.Count; i++)
-                if (motion.Node.Equals(_nodes[i].Name))
+                if (motion.Node.Equals(_nodes[i].DisplayedName))
                     return i;
             for (int i = 0; i < _meshes.Count; i++)
-                if (motion.Node.Equals(_meshes[i].Name))
+                if (motion.Node.Equals(_meshes[i].DisplayedName))
                     return i + _nodes.Count;
             for (int i = 0; i < _bones.Count; i++)
-                if (motion.Node.Equals(_bones[i].Name))
+                if (motion.Node.Equals(_bones[i].DisplayedName))
                     return i + _nodes.Count + _meshes.Count;
             for (int i = 0; i < _animations.Count; i++)
-                if (motion.Node.Equals(_animations[i].Name))
+                if (motion.Node.Equals(_animations[i].DisplayedName))
                     return i + _nodes.Count + _meshes.Count + _bones.Count;
             return -1;
         }
