@@ -15,7 +15,8 @@ namespace TPShipToolkit.MsbData
     {
         private int _parentId = -1;
         protected StringBuilder _parentName;
-        protected StringBuilder _name;
+        protected StringBuilder _displayedName;
+        private string _realName;
         private Point3d _pivot = new Point3d();
         private Point3d _position = new Point3d();
         private Point3d _scale = new Point3d();
@@ -32,10 +33,10 @@ namespace TPShipToolkit.MsbData
             set => _parentName = FindParentName(value);
         }
 
-        [Description("Element name.")]
-        public string Name
+        [Description("The displayed name of this element in this program. This name won't be used in the mesh scene file.")]
+        public string DisplayedName
         {
-            get => _name.ToString();
+            get => _displayedName.ToString();
             set
             {
                 if (value == "None")
@@ -62,8 +63,8 @@ namespace TPShipToolkit.MsbData
                         throw new ArgumentException("Invalid name.");
                     }
                     //set the name if no error
-                    _name.Clear();
-                    _name.Append(value);
+                    _displayedName.Clear();
+                    _displayedName.Append(value);
                 }
                 else
                 {
@@ -71,6 +72,8 @@ namespace TPShipToolkit.MsbData
                 }
             }
         }
+        [Description("The real name of this element, used in the mesh scene file.")]
+        public string RealName { get => _realName; set => _realName = value; }
         [Category("Position and scale"), Description("The point from where the object is scaled.")]
         public Point3d Pivot { get => _pivot; }
         [Category("Position and scale"), Description("The position of the object.")]
@@ -87,8 +90,9 @@ namespace TPShipToolkit.MsbData
 
         public Element(List<StringBuilder> elementsname, StringBuilder name)
         {
-            _name = name;
+            _displayedName = name;
             _elementsName = elementsname;
+            RealName = name.ToString();
         }
 
         public List<StringBuilder> GetParentsName()
@@ -120,7 +124,7 @@ namespace TPShipToolkit.MsbData
         public void ProcessName()
         {
             bool nameNeedsChange = false;
-            var nodeName = Name;
+            var nodeName = DisplayedName;
             for (int i = 0; i < _elementsName.Count; i++)
             {
                 var s = _elementsName[i].ToString();
@@ -157,14 +161,14 @@ namespace TPShipToolkit.MsbData
                 }
                 if (maxNodeNumber == int.MaxValue)
                     throw new Exception();
-                _name.Clear();
-                _name.Append(nodeName + "_" + (maxNodeNumber + 1));
+                _displayedName.Clear();
+                _displayedName.Append(nodeName + "_" + (maxNodeNumber + 1));
             }
         }
 
         public override string ToString()
         {
-            return _name.ToString();
+            return _displayedName.ToString();
         }
     }
 }
