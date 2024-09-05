@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing.Design;
@@ -9,15 +9,15 @@ namespace TPShipToolkit.MsbData
 {
     public class Animation
     {
-        private StringBuilder _name;
+        private StringBuilder _displayedName;
         private float _duration;
         private readonly List<Motion> _motions = new List<Motion>();
         private readonly List<StringBuilder> _elementsName;
 
-        [Description("Element name.")]
-        public string Name
+        [Description("The displayed name of this element in this program. This name won't be used in the mesh scene file.")]
+        public string DisplayedName
         {
-            get => _name.ToString();
+            get => _displayedName.ToString();
             set
             {
                 if (_elementsName != null)
@@ -42,8 +42,8 @@ namespace TPShipToolkit.MsbData
                         throw new ArgumentException("Invalid name.");
                     }
                     //set the name if no error
-                    _name.Clear();
-                    _name.Append(value);
+                    _displayedName.Clear();
+                    _displayedName.Append(value);
                 }
                 else
                 {
@@ -51,6 +51,9 @@ namespace TPShipToolkit.MsbData
                 }
             }
         }
+
+        [Description("The real name of this element, used in the mesh scene file.")]
+        public string RealName { get; set; }
 
         [Description("The total duration of the animation.")]
         public float Duration { get => _duration; set => _duration = value; }
@@ -60,8 +63,9 @@ namespace TPShipToolkit.MsbData
 
         public Animation(List<StringBuilder> elementsname, StringBuilder name)
         {
-            _name = name;
+            _displayedName = name;
             _elementsName = elementsname;
+            RealName = name.ToString();
         }
 
         public void AddMotion(Motion motion)
@@ -86,7 +90,7 @@ namespace TPShipToolkit.MsbData
         public void ProcessName()
         {
             bool nameNeedsChange = false;
-            var nodeName = Name;
+            var nodeName = DisplayedName;
             for (int i = 0; i < _elementsName.Count; i++)
             {
                 var s = _elementsName[i].ToString();
@@ -123,14 +127,13 @@ namespace TPShipToolkit.MsbData
                 }
                 if (maxNodeNumber == int.MaxValue)
                     throw new Exception();
-                _name.Clear();
-                _name.Append(nodeName + "_" + (maxNodeNumber + 1));
+                _displayedName.Clear();
+                _displayedName.Append(nodeName + "_" + (maxNodeNumber + 1));
             }
         }
-
         public override string ToString()
         {
-            return _name.ToString();
+            return _displayedName.ToString();
         }
     }
 }
