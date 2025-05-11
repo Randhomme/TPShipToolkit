@@ -9,6 +9,7 @@ namespace TPShipToolkit.Settings
     public class AppSettings
     {
         private string filename = "TPShipToolkit.xml";
+        public string TextureDirectory { get; set; } = "";
         public string OpenMdbDirectory { get; set; } = "";
         public string OpenObjDirectory { get; set; } = "";
         public string SaveObjDirectory { get; set; } = "";
