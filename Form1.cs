@@ -23,7 +23,6 @@ namespace TPShipToolkit
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
             InitializeComponent();
             LoadSettings();
-            comboBox1.SelectedIndex = 0;
         }
 
         //Load some settings
@@ -207,7 +206,6 @@ namespace TPShipToolkit
                     progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
                 });
                 progressDialog.ShowDialog();
-                comboBox1.SelectedIndex = (int)msbTool.GetMeshSceneType();
             }
         }
 
@@ -336,12 +334,6 @@ namespace TPShipToolkit
                 button5.Enabled = false;
                 button6.Enabled = false;
             }
-        }
-
-        //Updates the mesh scene type
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            msbTool.SetMeshSceneType((MeshSceneType)comboBox1.SelectedIndex);
         }
 
         //Add element
