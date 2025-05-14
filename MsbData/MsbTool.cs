@@ -10,7 +10,6 @@ namespace TPShipToolkit.MsbData
 {
     public class MsbTool
     {
-        private MeshSceneType _type;
         private int _parentcount = 0;
         private readonly List<Element> _nodes = new List<Element>();
         private readonly List<Element> _meshes = new List<Element>();
@@ -18,14 +17,6 @@ namespace TPShipToolkit.MsbData
         private readonly List<Animation> _animations = new List<Animation>();
         private readonly List<StringBuilder> _elementsName = new List<StringBuilder>() { new("None") };
 
-        public MeshSceneType GetMeshSceneType()
-        {
-            return _type;
-        }
-        public void SetMeshSceneType(MeshSceneType type)
-        {
-            _type = type;
-        }
         public List<Element> GetNodes()
         {
             return _nodes;
@@ -264,7 +255,6 @@ namespace TPShipToolkit.MsbData
                     try
                     {
                         List<string> msbstructs = new List<string>();
-                        //msbstructs.FindIndex(s=>s.Equals("a"));
 
                         //file definition
                         writer.Write((double)0);
@@ -277,9 +267,31 @@ namespace TPShipToolkit.MsbData
                         writer.Write(Encoding.Default.GetBytes(meshscenename));
                         msbstructs.Add("Name");
 
-                        //id - mesh scene type
+                        //id
                         writer.Write(2);
-                        writer.Write((uint)_type);
+                        var rootId = 0;
+                        // Find the first root node or mesh
+                        //nodes loop
+                        for (int i = 0; i < nodescount; i++)
+                        {
+                            var node = _nodes[i];
+                            if (GetNewParentId(node) == -1)
+                            {
+                                rootId = i;
+                                break;
+                            }
+                        }
+                        //meshes loop
+                        for (int i = 0; i < meshescount; i++)
+                        {
+                            var mesh = _meshes[i];
+                            if (GetNewParentId(mesh) == -1)
+                            {
+                                rootId = i + nodescount;
+                                break;
+                            }
+                        }
+                        writer.Write(rootId);
                         msbstructs.Add("ID");
 
                         //nodes - size
@@ -765,12 +777,10 @@ namespace TPShipToolkit.MsbData
                 throw new Exception("Failed to read the mesh scene name.\n");
             }
 
-            //02 00 00 00 for mesh scene id (it's more like a mesh scene type actually)
+            //02 00 00 00 for mesh scene id (id of the root element)
             try
             {
-                reader.BaseStream.Seek(4, SeekOrigin.Current);
-                meshscenetype = reader.ReadUInt32();
-                _type = FindMeshSceneType(meshscenetype);
+                reader.BaseStream.Seek(8, SeekOrigin.Current);
             }
             catch
             {
@@ -1328,16 +1338,6 @@ namespace TPShipToolkit.MsbData
                 if (motion.Node.Equals(_animations[i].DisplayedName))
                     return i + _nodes.Count + _meshes.Count + _bones.Count;
             return -1;
-        }
-
-        private MeshSceneType FindMeshSceneType(uint meshSceneType)
-        {
-            return meshSceneType switch
-            {
-                0 => MeshSceneType.ShipIslandPlanetAnimals,
-                1 => MeshSceneType.GunAndBullet,
-                _ => MeshSceneType.ShipIslandPlanetAnimals
-            };
         }
 
         private AttributeName GetAttributeName(string attributeName)
