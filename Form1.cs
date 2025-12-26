@@ -36,6 +36,7 @@ namespace TPShipToolkit
             radioButton4.Checked = !settings.ObjToXMdb;
             checkBox1.Checked = settings.ExportCBox;
             checkBox2.Checked = settings.AutoCBox;
+            checkBox3.Checked = settings.ExportLods;
         }
 
         //Help
@@ -74,7 +75,7 @@ namespace TPShipToolkit
                         var mdbTool = new MdbTool();
                         Task.Run(() =>
                         {
-                            mdbTool.XMdbTo1Obj(ofd.FileNames, sfd.FileName, checkBox1.Checked, progressDialog.Progress, progressDialog.Logs);
+                            mdbTool.XMdbTo1Obj(ofd.FileNames, sfd.FileName, checkBox1.Checked, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
                             progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
                         });
                         progressDialog.ShowDialog();
@@ -92,7 +93,7 @@ namespace TPShipToolkit
                         var mdbTool = new MdbTool();
                         Task.Run(() =>
                         {
-                            mdbTool.XMdbToXObj(ofd.FileNames, fbd.SelectedPath, checkBox1.Checked, progressDialog.Progress, progressDialog.Logs);
+                            mdbTool.XMdbToXObj(ofd.FileNames, fbd.SelectedPath, checkBox1.Checked, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
                             progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
                         });
                         progressDialog.ShowDialog();
@@ -162,6 +163,7 @@ namespace TPShipToolkit
             settings.ObjToXMdb = radioButton3.Checked;
             settings.ExportCBox = checkBox1.Checked;
             settings.AutoCBox = checkBox2.Checked;
+            settings.ExportLods = checkBox3.Checked;
             settings.Save();
         }
 

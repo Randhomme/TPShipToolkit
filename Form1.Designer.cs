@@ -60,11 +60,12 @@ namespace TPShipToolkit
             this.button8 = new System.Windows.Forms.Button();
             this.button7 = new System.Windows.Forms.Button();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
+            this.button5 = new System.Windows.Forms.Button();
+            this.button6 = new System.Windows.Forms.Button();
             this.propertyGrid1 = new System.Windows.Forms.PropertyGrid();
             this.button4 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
-            this.button5 = new System.Windows.Forms.Button();
-            this.button6 = new System.Windows.Forms.Button();
+            this.checkBox3 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -118,6 +119,7 @@ namespace TPShipToolkit
             this.groupBox3.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox3.Controls.Add(this.checkBox3);
             this.groupBox3.Controls.Add(this.checkBox1);
             this.groupBox3.Controls.Add(this.radioButton2);
             this.groupBox3.Controls.Add(this.radioButton1);
@@ -423,6 +425,30 @@ namespace TPShipToolkit
             this.flowLayoutPanel1.Size = new System.Drawing.Size(44, 509);
             this.flowLayoutPanel1.TabIndex = 0;
             // 
+            // button5
+            // 
+            this.button5.Enabled = false;
+            this.button5.Image = global::TPShipToolkit.Properties.Resources.ArrowUp;
+            this.button5.Location = new System.Drawing.Point(3, 0);
+            this.button5.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(24, 24);
+            this.button5.TabIndex = 0;
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
+            // 
+            // button6
+            // 
+            this.button6.Enabled = false;
+            this.button6.Image = global::TPShipToolkit.Properties.Resources.ArrowDown;
+            this.button6.Location = new System.Drawing.Point(3, 27);
+            this.button6.Margin = new System.Windows.Forms.Padding(3, 0, 3, 0);
+            this.button6.Name = "button6";
+            this.button6.Size = new System.Drawing.Size(24, 24);
+            this.button6.TabIndex = 1;
+            this.button6.UseVisualStyleBackColor = true;
+            this.button6.Click += new System.EventHandler(this.button6_Click);
+            // 
             // propertyGrid1
             // 
             this.propertyGrid1.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -452,29 +478,15 @@ namespace TPShipToolkit
             this.button3.UseVisualStyleBackColor = true;
             this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
-            // button5
+            // checkBox3
             // 
-            this.button5.Enabled = false;
-            this.button5.Image = global::TPShipToolkit.Properties.Resources.ArrowUp;
-            this.button5.Location = new System.Drawing.Point(3, 0);
-            this.button5.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(24, 24);
-            this.button5.TabIndex = 0;
-            this.button5.UseVisualStyleBackColor = true;
-            this.button5.Click += new System.EventHandler(this.button5_Click);
-            // 
-            // button6
-            // 
-            this.button6.Enabled = false;
-            this.button6.Image = global::TPShipToolkit.Properties.Resources.ArrowDown;
-            this.button6.Location = new System.Drawing.Point(3, 27);
-            this.button6.Margin = new System.Windows.Forms.Padding(3, 0, 3, 0);
-            this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(24, 24);
-            this.button6.TabIndex = 1;
-            this.button6.UseVisualStyleBackColor = true;
-            this.button6.Click += new System.EventHandler(this.button6_Click);
+            this.checkBox3.AutoSize = true;
+            this.checkBox3.Location = new System.Drawing.Point(6, 90);
+            this.checkBox3.Name = "checkBox3";
+            this.checkBox3.Size = new System.Drawing.Size(78, 17);
+            this.checkBox3.TabIndex = 4;
+            this.checkBox3.Text = "Export lods";
+            this.checkBox3.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
@@ -549,5 +561,6 @@ namespace TPShipToolkit
         private System.Windows.Forms.PropertyGrid propertyGrid1;
         private System.Windows.Forms.ToolStripMenuItem settingsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem textureToolStripMenuItem;
+        private System.Windows.Forms.CheckBox checkBox3;
     }
 }

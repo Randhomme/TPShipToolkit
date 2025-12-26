@@ -35,7 +35,7 @@ namespace TPShipToolkit.MdbData
         /// <param name="objPath">The obj file path.</param>
         /// <param name="progress">Progress on the progress bar.</param>
         /// <param name="logs">Logs in the text box.</param>
-        public void XMdbTo1Obj(string[] mdbs, string objPath, bool exportCboxes, IProgress<int> progress, IProgress<string> logs)
+        public void XMdbTo1Obj(string[] mdbs, string objPath, bool exportCboxes, bool exportLods, IProgress<int> progress, IProgress<string> logs)
         {
             try
             {
@@ -69,7 +69,7 @@ namespace TPShipToolkit.MdbData
                                         {
                                             logs.Report("Reading " + mdb + " ... ");
                                             watch.Start();
-                                            ReadMdb(mdbReader, groupName);
+                                            ReadMdb(mdbReader, groupName, exportLods);
                                             watch.Stop();
                                             logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                                             logs.Report("Writing obj ... ");
@@ -114,7 +114,7 @@ namespace TPShipToolkit.MdbData
                                     {
                                         logs.Report("Reading " + mdb + " ... ");
                                         watch.Start();
-                                        ReadMdb(mdbReader, groupName);
+                                        ReadMdb(mdbReader, groupName, exportLods);
                                         watch.Stop();
                                         logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                                         logs.Report("Writing obj ... ");
@@ -161,7 +161,7 @@ namespace TPShipToolkit.MdbData
         /// <param name="objFolderPath">The folder path to export the obj file(s).</param>
         /// <param name="progress">Progress on the progress bar.</param>
         /// <param name="logs">Logs in the text box.</param>
-        public void XMdbToXObj(string[] mdbs, string objFolderPath, bool exportCboxes, IProgress<int> progress, IProgress<string> logs)
+        public void XMdbToXObj(string[] mdbs, string objFolderPath, bool exportCboxes, bool exportLods, IProgress<int> progress, IProgress<string> logs)
         {
             try
             {
@@ -178,7 +178,7 @@ namespace TPShipToolkit.MdbData
                             {
                                 logs.Report("Reading " + mdb + " ... ");
                                 watch.Start();
-                                ReadMdb(mdbReader, groupName);
+                                ReadMdb(mdbReader, groupName, exportLods);
                                 watch.Stop();
                                 logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                             }
@@ -235,7 +235,7 @@ namespace TPShipToolkit.MdbData
                             {
                                 logs.Report("Reading " + mdb + " ... ");
                                 watch.Start();
-                                ReadMdb(mdbReader, groupName);
+                                ReadMdb(mdbReader, groupName, exportLods);
                                 watch.Stop();
                                 logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                                 progress.Report(i + 1);
@@ -291,7 +291,7 @@ namespace TPShipToolkit.MdbData
         /// <param name="mdbReader">The mdb file.</param>
         /// <param name="groupName">The base group name to name the groups/object of the mdb.</param>
         /// <exception cref="Exception"></exception>
-        private void ReadMdb(BinaryReader mdbReader, string groupName)
+        private void ReadMdb(BinaryReader mdbReader, string groupName, bool exportLods)
         {
             uint modelCount, modelLength, modelStart, matCount, vCount, tCount, bCount;
             //File length stuff
@@ -324,68 +324,21 @@ namespace TPShipToolkit.MdbData
                 {
                     throw new Exception("Skipped\nUnable to read point count of model number " + i + " in the file.\n");
                 }
-                //Vertexes
-                for (uint j = 0; j < vCount; j++)
+                if (!exportLods && i > 0) //Skip lods
                 {
-                    try
+                    //Vertexes
+                    for (uint j = 0; j < vCount; j++)
                     {
-                        //skip 4 bytes (vertex block length)
-                        mdbReader.BaseStream.Seek(4, SeekOrigin.Current);
-                        //v, vt, vn
-                        v.Add(new Vector3(mdbReader.ReadSingle(), mdbReader.ReadSingle(), mdbReader.ReadSingle()));
-                        vt.Add(new Vector2(mdbReader.ReadSingle(), mdbReader.ReadSingle()));
-                        vn.Add(new Vector2(mdbReader.ReadSingle(), mdbReader.ReadSingle()));        
-                        //vn.Add(((float, float, float))(-Math.Sin(vnx), Math.Sin(vny), -Math.Cos(vnx)));
-                        //skip 4 bytes (transparency) (FF FF FF FF)
-                        mdbReader.BaseStream.Seek(4, SeekOrigin.Current);
+                        mdbReader.BaseStream.Seek(36, SeekOrigin.Current);
                     }
-                    catch
-                    {
-                        throw new Exception("Skipped\nUnable to read point number " + j + " of model number " + i + " in the file.\n");
-                    }
-                }
-                try
-                {
-                    //tris count
                     tCount = mdbReader.ReadUInt32();
-                }
-                catch
-                {
-                    throw new Exception("Skipped\nUnable to read triangle count of model number " + i + " in the file.\n");
-                }
-                //Triangles
-                int currentMat = -1;
-                var group = (groupName + "_" + i, vCount, new List<(int, List<MdbTriangle>)>());
-                var triList = new List<MdbTriangle>();
-                for (uint j = 0; j < tCount; j++)
-                {
-                    try
-                    {
-                        //skip 4 bytes (tri block length)
-                        mdbReader.BaseStream.Seek(4, SeekOrigin.Current);
 
-                        var tri = new MdbTriangle() { P0 = mdbReader.ReadUInt16(), P1 = mdbReader.ReadUInt16(), P2 = mdbReader.ReadUInt16() };
-                        var mat = mdbReader.ReadUInt16();
-                        if(currentMat!=mat)
-                        {
-                            triList = new List<MdbTriangle>();
-                            group.Item3.Add((mat, triList));
-                            triList.Add(tri);
-                            currentMat = mat;
-                        }
-                        else
-                        {
-                            triList.Add(tri);
-                        }
-                    }
-                    catch
+                    //Triangles
+                    for (uint j = 0; j < tCount; j++)
                     {
-                        throw new Exception("Skipped\nUnable to read triangle number " + j + " of model number " + i + ".\n");
+                        mdbReader.BaseStream.Seek(12, SeekOrigin.Current);
                     }
-                }
-                groups.Add(group);
-                try
-                {
+
                     //skip 4 bytes (potential animation count)
                     mdbReader.BaseStream.Seek(4, SeekOrigin.Current);
                     //check if we reach the end (because potential animation block)
@@ -393,9 +346,81 @@ namespace TPShipToolkit.MdbData
                     if (length < modelLength)
                         mdbReader.BaseStream.Seek(modelLength - length, SeekOrigin.Current);
                 }
-                catch
+                else
                 {
-                    throw new Exception("Skipped\nUnable to reach the end of model " + i + " in the file.\n");
+                    //Vertexes
+                    for (uint j = 0; j < vCount; j++)
+                    {
+                        try
+                        {
+                            //skip 4 bytes (vertex block length)
+                            mdbReader.BaseStream.Seek(4, SeekOrigin.Current);
+                            //v, vt, vn
+                            v.Add(new Vector3(mdbReader.ReadSingle(), mdbReader.ReadSingle(), mdbReader.ReadSingle()));
+                            vt.Add(new Vector2(mdbReader.ReadSingle(), mdbReader.ReadSingle()));
+                            vn.Add(new Vector2(mdbReader.ReadSingle(), mdbReader.ReadSingle()));
+                            //vn.Add(((float, float, float))(-Math.Sin(vnx), Math.Sin(vny), -Math.Cos(vnx)));
+                            //skip 4 bytes (transparency) (FF FF FF FF)
+                            mdbReader.BaseStream.Seek(4, SeekOrigin.Current);
+                        }
+                        catch
+                        {
+                            throw new Exception("Skipped\nUnable to read point number " + j + " of model number " + i + " in the file.\n");
+                        }
+                    }
+                    try
+                    {
+                        //tris count
+                        tCount = mdbReader.ReadUInt32();
+                    }
+                    catch
+                    {
+                        throw new Exception("Skipped\nUnable to read triangle count of model number " + i + " in the file.\n");
+                    }
+                    //Triangles
+                    int currentMat = -1;
+                    var group = (groupName + "_" + i, vCount, new List<(int, List<MdbTriangle>)>());
+                    var triList = new List<MdbTriangle>();
+                    for (uint j = 0; j < tCount; j++)
+                    {
+                        try
+                        {
+                            //skip 4 bytes (tri block length)
+                            mdbReader.BaseStream.Seek(4, SeekOrigin.Current);
+
+                            var tri = new MdbTriangle() { P0 = mdbReader.ReadUInt16(), P1 = mdbReader.ReadUInt16(), P2 = mdbReader.ReadUInt16() };
+                            var mat = mdbReader.ReadUInt16();
+                            if (currentMat != mat)
+                            {
+                                triList = new List<MdbTriangle>();
+                                group.Item3.Add((mat, triList));
+                                triList.Add(tri);
+                                currentMat = mat;
+                            }
+                            else
+                            {
+                                triList.Add(tri);
+                            }
+                        }
+                        catch
+                        {
+                            throw new Exception("Skipped\nUnable to read triangle number " + j + " of model number " + i + ".\n");
+                        }
+                    }
+                    groups.Add(group);
+                    try
+                    {
+                        //skip 4 bytes (potential animation count)
+                        mdbReader.BaseStream.Seek(4, SeekOrigin.Current);
+                        //check if we reach the end (because potential animation block)
+                        var length = mdbReader.BaseStream.Position - modelStart;
+                        if (length < modelLength)
+                            mdbReader.BaseStream.Seek(modelLength - length, SeekOrigin.Current);
+                    }
+                    catch
+                    {
+                        throw new Exception("Skipped\nUnable to reach the end of model " + i + " in the file.\n");
+                    }
                 }
             }
 

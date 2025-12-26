@@ -19,6 +19,7 @@ namespace TPShipToolkit.Settings
         public bool ObjToXMdb { get; set; } = true;
         public bool ExportCBox { get; set; } = false;
         public bool AutoCBox { get; set; } = true;
+        public bool ExportLods { get; set; } = true;
 
         public AppSettings Load()
         {
