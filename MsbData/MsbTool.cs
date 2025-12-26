@@ -753,7 +753,7 @@ namespace TPShipToolkit.MsbData
 
         private void ReadHeaderData(BinaryReader reader, IProgress<string> logs)
         {
-            uint stringlength, meshscenetype;
+            uint stringlength;
             //skip file size bytes
             try
             {
