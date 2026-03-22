@@ -17,9 +17,9 @@ namespace TPShipToolkit.MsbData
         protected StringBuilder _parentName;
         protected StringBuilder _displayedName;
         private string _realName;
-        private Point3d _pivot = new Point3d();
-        private Point3d _position = new Point3d();
-        private Point3d _scale = new Point3d();
+        private readonly Point3d _pivot = new();
+        private readonly Point3d _position = new();
+        private readonly Rotation _rotation = new();
         private readonly List<Attribute> _attributes = new List<Attribute>();
         protected readonly List<StringBuilder> _elementsName;
 
@@ -74,12 +74,12 @@ namespace TPShipToolkit.MsbData
         }
         [Description("The real name of this element, used in the mesh scene file.")]
         public string RealName { get => _realName; set => _realName = value; }
-        [Category("Position and scale"), Description("The point from where the object is scaled.")]
+        [Category("Position and Rotation"), Description("The point from where the object is moved and rotated. This point stays at the center of the object.")]
         public Point3d Pivot { get => _pivot; }
-        [Category("Position and scale"), Description("The position of the object.")]
+        [Category("Position and Rotation"), Description("The position of the object.")]
         public Point3d Position { get => _position; }
-        [Category("Position and scale"), Description("The scale of the object.")]
-        public Point3d Scale { get => _scale; }
+        [Category("Position and Rotation"), Description("The rotation of the object (yaw pitch roll).")]
+        public Rotation Rotation { get => _rotation; }
         [Description("Attribute collection for the element.")]
         public List<Attribute> Attributes { get => _attributes; }
 

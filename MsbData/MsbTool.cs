@@ -350,11 +350,14 @@ namespace TPShipToolkit.MsbData
                             writer.Write(8);
                             writer.Write(node.Position.Z);
                             writer.Write(8);
-                            writer.Write(node.Scale.X);
+                            float yawRad = (float)(node.Rotation.Yaw * Math.PI / 180);
+                            writer.Write(yawRad);
                             writer.Write(8);
-                            writer.Write(node.Scale.Y);
+                            float pitchRad = (float)(node.Rotation.Pitch * Math.PI / 180);
+                            writer.Write(pitchRad);
                             writer.Write(8);
-                            writer.Write(node.Scale.Z);
+                            float rollRad = (float)(node.Rotation.Roll * Math.PI / 180);
+                            writer.Write(rollRad);
 
                             //attribute size
                             writer.Write(9);
@@ -451,11 +454,14 @@ namespace TPShipToolkit.MsbData
                             writer.Write(d + 3);
                             writer.Write(mesh.Position.Z);
                             writer.Write(d + 3);
-                            writer.Write(mesh.Scale.X);
+                            float yawRad = (float)(mesh.Rotation.Yaw * Math.PI / 180);
+                            writer.Write(yawRad);
                             writer.Write(d + 3);
-                            writer.Write(mesh.Scale.Y);
+                            float pitchRad = (float)(mesh.Rotation.Pitch * Math.PI / 180);
+                            writer.Write(pitchRad);
                             writer.Write(d + 3);
-                            writer.Write(mesh.Scale.Z);
+                            float rollRad = (float)(mesh.Rotation.Roll * Math.PI / 180);
+                            writer.Write(rollRad);
 
                             //attribute - size
                             writer.Write(d + 4);
@@ -551,11 +557,14 @@ namespace TPShipToolkit.MsbData
                             writer.Write(d + 3);
                             writer.Write(bone.Position.Z);
                             writer.Write(d + 3);
-                            writer.Write(bone.Scale.X);
+                            float yawRad = (float)(bone.Rotation.Yaw * Math.PI / 180);
+                            writer.Write(yawRad);
                             writer.Write(d + 3);
-                            writer.Write(bone.Scale.Y);
+                            float pitchRad = (float)(bone.Rotation.Pitch * Math.PI / 180);
+                            writer.Write(pitchRad);
                             writer.Write(d + 3);
-                            writer.Write(bone.Scale.Z);
+                            float rollRad = (float)(bone.Rotation.Roll * Math.PI / 180);
+                            writer.Write(rollRad);
 
                             //attribute - size
                             writer.Write(d + 4);
@@ -845,11 +854,11 @@ namespace TPShipToolkit.MsbData
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
                     node.Position.Z = reader.ReadSingle();
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    node.Scale.X = reader.ReadSingle();
+                    node.Rotation.Yaw = (float)(reader.ReadSingle() * 180 / Math.PI);
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    node.Scale.Y = reader.ReadSingle();
+                    node.Rotation.Pitch = (float)(reader.ReadSingle() * 180 / Math.PI);
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    node.Scale.Z = reader.ReadSingle();
+                    node.Rotation.Roll = (float)(reader.ReadSingle() * 180 / Math.PI);
 
                     //attribute count
                     try
@@ -957,11 +966,11 @@ namespace TPShipToolkit.MsbData
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
                     mesh.Position.Z = reader.ReadSingle();
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    mesh.Scale.X = reader.ReadSingle();
+                    mesh.Rotation.Yaw = (float)(reader.ReadSingle() * 180 / Math.PI);
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    mesh.Scale.Y = reader.ReadSingle();
+                    mesh.Rotation.Pitch = (float)(reader.ReadSingle() * 180 / Math.PI);
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    mesh.Scale.Z = reader.ReadSingle();
+                    mesh.Rotation.Roll = (float)(reader.ReadSingle() * 180 / Math.PI);
 
                     //attribute count
                     try
@@ -1070,11 +1079,11 @@ namespace TPShipToolkit.MsbData
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
                     bone.Position.Z = reader.ReadSingle();
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    bone.Scale.X = reader.ReadSingle();
+                    bone.Rotation.Yaw = (float)(reader.ReadSingle() * 180 / Math.PI);
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    bone.Scale.Y = reader.ReadSingle();
+                    bone.Rotation.Pitch = (float)(reader.ReadSingle() * 180 / Math.PI);
                     reader.BaseStream.Seek(4, SeekOrigin.Current);
-                    bone.Scale.Z = reader.ReadSingle();
+                    bone.Rotation.Roll = (float)(reader.ReadSingle() * 180 / Math.PI);
 
                     //attribute count
                     try
