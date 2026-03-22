@@ -1,11 +1,12 @@
 using System;
 using System.Globalization;
 using System.IO;
-using System.Security.Cryptography;
+using System.Linq;
+using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using TPShipToolkit.Dialogs;
-using TPShipToolkit.Enums;
 using TPShipToolkit.MdbData;
 using TPShipToolkit.MsbData;
 using TPShipToolkit.Settings;
@@ -22,6 +23,8 @@ namespace TPShipToolkit
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
             InitializeComponent();
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            Text = $"{Text} v{version.Major}.{version.Minor}.{version.Build}";
             LoadSettings();
         }
 
@@ -542,6 +545,52 @@ namespace TPShipToolkit
             {
                 settings.TextureDirectory = fbd.SelectedPath + "\\";
             }
+        }
+
+        private async void Form1_Shown(object sender, EventArgs e)
+        {
+            #if !DEBUG //Don't check for updates in debug mode
+                var local = new Version(FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion);
+                var latest = await GetLatestGitHubVersionAsync();
+                if (latest != null && latest > local)
+                {
+                    if (MessageBox.Show(
+                        $"A new update is available (v{latest}).\n" +
+                        "Do you want to check it out ?",
+                        "Update available",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Information
+                    ) == DialogResult.Yes)
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "https://github.com/Randhomme/TPShipToolkit/releases/latest",
+                            UseShellExecute = true
+                        });
+                    }
+                }
+            #endif
+        }
+
+        /// <summary>
+        /// Check for a new release
+        /// </summary>
+        /// <returns></returns>
+        private async Task<Version> GetLatestGitHubVersionAsync()
+        {
+            try
+            {
+                var url = "https://github.com/Randhomme/TPShipToolkit/releases/latest";
+                
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "request");
+
+                var response = await client.GetAsync(url);
+                var finalUrl = response.RequestMessage.RequestUri.ToString();
+                var tag = finalUrl.Split('/').Last().TrimStart('v');
+                return Version.TryParse(tag, out var version) ? version : null;
+            }
+            catch { return null; }
         }
     }
 }
