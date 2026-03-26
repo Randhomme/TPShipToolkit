@@ -52,9 +52,9 @@ namespace TPShipToolkit.MdbData
                             logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                         }
                     }
-                    catch
+                    catch(Exception ex)
                     {
-                        logs.Report("Skipped\nUnable to read obj file.\n");
+                        logs.Report($"Skipped\nUnable to read obj file : {ex.Message}.\n");
                         progress.Report(i + 1);
                         continue;
                     }
@@ -601,7 +601,9 @@ namespace TPShipToolkit.MdbData
                 //triangle outside group
                 else if (line.StartsWith("f ", StringComparison.OrdinalIgnoreCase))
                 {
-                    var s = line.Split(separator, 4);
+                    var s = line.Split(separator);
+                    if (s.Length > 4)
+                        throw new("Polygons need to be triangles");
                     try
                     {
                         var p0 = s[1].Split('/');
@@ -1179,56 +1181,71 @@ namespace TPShipToolkit.MdbData
             mdbWriter.Write(points.Count);
             for (int i = 0; i < points.Count; i++)
             {
-                var p = points[i];
-                var pV = v[p[0] - 1];
-                var pVt = vt[p[1] - 1];
-                var pVn = vn[p[2] - 1];
-                if (pV.X < tempMinX)
-                    tempMinX = pV.X;
-                if (pV.Y < tempMinY)
-                    tempMinY = pV.Y;
-                if (pV.Z < tempMinZ)
-                    tempMinZ = pV.Z;
-                if (pV.X > tempMaxX)
-                    tempMaxX = pV.X;
-                if (pV.Y > tempMaxY)
-                    tempMaxY = pV.Y;
-                if (pV.Z > tempMaxZ)
-                    tempMaxZ = pV.Z;
-                mdbWriter.Write(32);
-                mdbWriter.Write(pV.X);
-                mdbWriter.Write(-pV.Z);
-                mdbWriter.Write(pV.Y);
-                mdbWriter.Write(pVt.X);
-                mdbWriter.Write(-pVt.Y);
-                if (pVn.Z < -1)
-                    pVn.Z = -1;
-                else if (pVn.Z > 1)
-                    pVn.Z = 1;
-                if (pVn.X <= 0)
-                    mdbWriter.Write((float)Math.Acos(-pVn.Z));
-                else
-                    mdbWriter.Write((float)-Math.Acos(-pVn.Z));
-                mdbWriter.Write((float)Math.Asin(pVn.Y));
-                //FF FF FF FF
-                mdbWriter.Write(-1);
+                try
+                {
+                    var p = points[i];
+                    var pV = v[p[0] - 1];
+                    var pVt = vt[p[1] - 1];
+                    var pVn = vn[p[2] - 1];
+                    if (pV.X < tempMinX)
+                        tempMinX = pV.X;
+                    if (pV.Y < tempMinY)
+                        tempMinY = pV.Y;
+                    if (pV.Z < tempMinZ)
+                        tempMinZ = pV.Z;
+                    if (pV.X > tempMaxX)
+                        tempMaxX = pV.X;
+                    if (pV.Y > tempMaxY)
+                        tempMaxY = pV.Y;
+                    if (pV.Z > tempMaxZ)
+                        tempMaxZ = pV.Z;
+                    mdbWriter.Write(32);
+                    mdbWriter.Write(pV.X);
+                    mdbWriter.Write(-pV.Z);
+                    mdbWriter.Write(pV.Y);
+                    mdbWriter.Write(pVt.X);
+                    mdbWriter.Write(-pVt.Y);
+                    if (pVn.Z < -1)
+                        pVn.Z = -1;
+                    else if (pVn.Z > 1)
+                        pVn.Z = 1;
+                    if (pVn.X <= 0)
+                        mdbWriter.Write((float)Math.Acos(-pVn.Z));
+                    else
+                        mdbWriter.Write((float)-Math.Acos(-pVn.Z));
+                    mdbWriter.Write((float)Math.Asin(pVn.Y));
+                    //FF FF FF FF
+                    mdbWriter.Write(-1);
+                }
+                catch
+                {
+                    throw new($"Unable to write point {i + 1}.\n");
+                }
+                
             }
             var tPos = mdbWriter.BaseStream.Position;
             var tempTCount = 0;
             mdbWriter.Write(0);
             for (int i = 0; i < triangles.Count; i++)
             {
-                var triGroup = triangles[i];
-                for (int j = 0; j < triGroup.pointsIndex.Count; j++)
+                try
                 {
-                    var tri = triGroup.pointsIndex[j];
-                    mdbWriter.Write(8);
-                    mdbWriter.Write(tri[2]);
-                    mdbWriter.Write(tri[1]);
-                    mdbWriter.Write(tri[0]);
-                    mdbWriter.Write(triGroup.matIndex);
+                    var (matIndex, pointsIndex) = triangles[i];
+                    for (int j = 0; j < pointsIndex.Count; j++)
+                    {
+                        var tri = pointsIndex[j];
+                        mdbWriter.Write(8);
+                        mdbWriter.Write(tri[2]);
+                        mdbWriter.Write(tri[1]);
+                        mdbWriter.Write(tri[0]);
+                        mdbWriter.Write(matIndex);
+                    }
+                    tempTCount += pointsIndex.Count;
                 }
-                tempTCount += triGroup.pointsIndex.Count;
+                catch
+                {
+                    throw new($"Unable to write triangle {i + 1}.\n");
+                }
             }
             int blockLength = (int)(mdbWriter.BaseStream.Position - pos);
             mdbWriter.BaseStream.Seek(tPos, SeekOrigin.Begin);
