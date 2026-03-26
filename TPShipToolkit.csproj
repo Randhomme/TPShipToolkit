@@ -6,9 +6,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>10</LangVersion>
     <PlatformTarget>AnyCPU</PlatformTarget>
-	<Version>1.0.8</Version>
-	<AssemblyVersion>1.0.8</AssemblyVersion>
-	<FileVersion>1.0.8</FileVersion>
+	<Version>$(Version)</Version>
+	<AssemblyVersion>$(Version)</AssemblyVersion>
+	<FileVersion>$(Version)</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
