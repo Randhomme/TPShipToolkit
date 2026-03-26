@@ -50,7 +50,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $out
 
           Copy-Item `
-            $env:PROJECT_NAME\bin\Release\$env:TARGET_FRAMEWORK\* `
+            bin\Release\$env:TARGET_FRAMEWORK\* `
             $out `
             -Recurse `
             -Force
