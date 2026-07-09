@@ -36,13 +36,11 @@ namespace TPShipToolkit
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.checkBox3 = new System.Windows.Forms.CheckBox();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.radioButton2 = new System.Windows.Forms.RadioButton();
             this.radioButton1 = new System.Windows.Forms.RadioButton();
             this.button1 = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
-            this.checkBox2 = new System.Windows.Forms.CheckBox();
             this.radioButton4 = new System.Windows.Forms.RadioButton();
             this.radioButton3 = new System.Windows.Forms.RadioButton();
             this.button2 = new System.Windows.Forms.Button();
@@ -61,11 +59,11 @@ namespace TPShipToolkit
             this.button8 = new System.Windows.Forms.Button();
             this.button7 = new System.Windows.Forms.Button();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
-            this.button5 = new System.Windows.Forms.Button();
-            this.button6 = new System.Windows.Forms.Button();
             this.propertyGrid1 = new System.Windows.Forms.PropertyGrid();
             this.button4 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
+            this.button5 = new System.Windows.Forms.Button();
+            this.button6 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -112,7 +110,7 @@ namespace TPShipToolkit
             this.groupBox1.Size = new System.Drawing.Size(466, 546);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Mdb to Obj";
+            this.groupBox1.Text = "Mdb to 3D file";
             // 
             // groupBox3
             // 
@@ -120,7 +118,6 @@ namespace TPShipToolkit
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.groupBox3.Controls.Add(this.checkBox3);
-            this.groupBox3.Controls.Add(this.checkBox1);
             this.groupBox3.Controls.Add(this.radioButton2);
             this.groupBox3.Controls.Add(this.radioButton1);
             this.groupBox3.Location = new System.Drawing.Point(6, 45);
@@ -133,31 +130,21 @@ namespace TPShipToolkit
             // checkBox3
             // 
             this.checkBox3.AutoSize = true;
-            this.checkBox3.Location = new System.Drawing.Point(6, 90);
+            this.checkBox3.Location = new System.Drawing.Point(6, 67);
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(78, 17);
             this.checkBox3.TabIndex = 4;
             this.checkBox3.Text = "Export lods";
             this.checkBox3.UseVisualStyleBackColor = true;
             // 
-            // checkBox1
-            // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(6, 67);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(127, 17);
-            this.checkBox1.TabIndex = 0;
-            this.checkBox1.Text = "Export collision boxes";
-            this.checkBox1.UseVisualStyleBackColor = true;
-            // 
             // radioButton2
             // 
             this.radioButton2.AutoSize = true;
             this.radioButton2.Location = new System.Drawing.Point(6, 43);
             this.radioButton2.Name = "radioButton2";
-            this.radioButton2.Size = new System.Drawing.Size(94, 17);
+            this.radioButton2.Size = new System.Drawing.Size(110, 17);
             this.radioButton2.TabIndex = 3;
-            this.radioButton2.Text = "X mdb to X obj";
+            this.radioButton2.Text = "X mdb to X 3D file";
             this.radioButton2.UseVisualStyleBackColor = true;
             // 
             // radioButton1
@@ -166,10 +153,10 @@ namespace TPShipToolkit
             this.radioButton1.Checked = true;
             this.radioButton1.Location = new System.Drawing.Point(6, 19);
             this.radioButton1.Name = "radioButton1";
-            this.radioButton1.Size = new System.Drawing.Size(93, 17);
+            this.radioButton1.Size = new System.Drawing.Size(109, 17);
             this.radioButton1.TabIndex = 2;
             this.radioButton1.TabStop = true;
-            this.radioButton1.Text = "X mdb to 1 obj";
+            this.radioButton1.Text = "X mdb to 1 3D file";
             this.radioButton1.UseVisualStyleBackColor = true;
             // 
             // button1
@@ -193,14 +180,13 @@ namespace TPShipToolkit
             this.groupBox2.Size = new System.Drawing.Size(476, 546);
             this.groupBox2.TabIndex = 0;
             this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Obj to Mdb";
+            this.groupBox2.Text = "3D filej to Mdb";
             // 
             // groupBox4
             // 
             this.groupBox4.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox4.Controls.Add(this.checkBox2);
             this.groupBox4.Controls.Add(this.radioButton4);
             this.groupBox4.Controls.Add(this.radioButton3);
             this.groupBox4.Location = new System.Drawing.Point(6, 45);
@@ -210,27 +196,14 @@ namespace TPShipToolkit
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Export settings (read help for more info)";
             // 
-            // checkBox2
-            // 
-            this.checkBox2.AutoSize = true;
-            this.checkBox2.Checked = true;
-            this.checkBox2.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox2.Location = new System.Drawing.Point(6, 67);
-            this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(119, 17);
-            this.checkBox2.TabIndex = 0;
-            this.checkBox2.Text = "Auto collision boxes";
-            this.checkBox2.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
-            this.checkBox2.UseVisualStyleBackColor = true;
-            // 
             // radioButton4
             // 
             this.radioButton4.AutoSize = true;
             this.radioButton4.Location = new System.Drawing.Point(6, 43);
             this.radioButton4.Name = "radioButton4";
-            this.radioButton4.Size = new System.Drawing.Size(94, 17);
+            this.radioButton4.Size = new System.Drawing.Size(110, 17);
             this.radioButton4.TabIndex = 3;
-            this.radioButton4.Text = "X obj to X mdb";
+            this.radioButton4.Text = "X 3D file to X mdb";
             this.radioButton4.UseVisualStyleBackColor = true;
             // 
             // radioButton3
@@ -239,10 +212,10 @@ namespace TPShipToolkit
             this.radioButton3.Checked = true;
             this.radioButton3.Location = new System.Drawing.Point(6, 19);
             this.radioButton3.Name = "radioButton3";
-            this.radioButton3.Size = new System.Drawing.Size(93, 17);
+            this.radioButton3.Size = new System.Drawing.Size(109, 17);
             this.radioButton3.TabIndex = 2;
             this.radioButton3.TabStop = true;
-            this.radioButton3.Text = "1 obj to X mdb";
+            this.radioButton3.Text = "1 3D file to X mdb";
             this.radioButton3.UseVisualStyleBackColor = true;
             // 
             // button2
@@ -252,7 +225,7 @@ namespace TPShipToolkit
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(470, 23);
             this.button2.TabIndex = 0;
-            this.button2.Text = "Open Obj";
+            this.button2.Text = "Open 3D file";
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
@@ -435,30 +408,6 @@ namespace TPShipToolkit
             this.flowLayoutPanel1.Size = new System.Drawing.Size(44, 509);
             this.flowLayoutPanel1.TabIndex = 0;
             // 
-            // button5
-            // 
-            this.button5.Enabled = false;
-            this.button5.Image = global::TPShipToolkit.Properties.Resources.ArrowUp;
-            this.button5.Location = new System.Drawing.Point(3, 0);
-            this.button5.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(24, 24);
-            this.button5.TabIndex = 0;
-            this.button5.UseVisualStyleBackColor = true;
-            this.button5.Click += new System.EventHandler(this.button5_Click);
-            // 
-            // button6
-            // 
-            this.button6.Enabled = false;
-            this.button6.Image = global::TPShipToolkit.Properties.Resources.ArrowDown;
-            this.button6.Location = new System.Drawing.Point(3, 27);
-            this.button6.Margin = new System.Windows.Forms.Padding(3, 0, 3, 0);
-            this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(24, 24);
-            this.button6.TabIndex = 1;
-            this.button6.UseVisualStyleBackColor = true;
-            this.button6.Click += new System.EventHandler(this.button6_Click);
-            // 
             // propertyGrid1
             // 
             this.propertyGrid1.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -487,6 +436,30 @@ namespace TPShipToolkit
             this.button3.Text = "Import";
             this.button3.UseVisualStyleBackColor = true;
             this.button3.Click += new System.EventHandler(this.button3_Click);
+            // 
+            // button5
+            // 
+            this.button5.Enabled = false;
+            this.button5.Image = global::TPShipToolkit.Properties.Resources.ArrowUp;
+            this.button5.Location = new System.Drawing.Point(3, 0);
+            this.button5.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(24, 24);
+            this.button5.TabIndex = 0;
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
+            // 
+            // button6
+            // 
+            this.button6.Enabled = false;
+            this.button6.Image = global::TPShipToolkit.Properties.Resources.ArrowDown;
+            this.button6.Location = new System.Drawing.Point(3, 27);
+            this.button6.Margin = new System.Windows.Forms.Padding(3, 0, 3, 0);
+            this.button6.Name = "button6";
+            this.button6.Size = new System.Drawing.Size(24, 24);
+            this.button6.TabIndex = 1;
+            this.button6.UseVisualStyleBackColor = true;
+            this.button6.Click += new System.EventHandler(this.button6_Click);
             // 
             // Form1
             // 
@@ -546,8 +519,6 @@ namespace TPShipToolkit
         private System.Windows.Forms.RadioButton radioButton1;
         private System.Windows.Forms.RadioButton radioButton4;
         private System.Windows.Forms.RadioButton radioButton3;
-        private System.Windows.Forms.CheckBox checkBox1;
-        private System.Windows.Forms.CheckBox checkBox2;
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.Button button4;
         private System.Windows.Forms.SplitContainer splitContainer2;
