@@ -72,9 +72,9 @@
             this.label1.Location = new System.Drawing.Point(8, 5);
             this.label1.Margin = new System.Windows.Forms.Padding(3, 0, 3, 5);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(311, 17);
+            this.label1.Size = new System.Drawing.Size(310, 17);
             this.label1.TabIndex = 0;
-            this.label1.Text = "X mdb to 1 obj";
+            this.label1.Text = "X mdb to 1 3D file";
             // 
             // label2
             // 
@@ -84,9 +84,9 @@
             this.label2.Location = new System.Drawing.Point(8, 27);
             this.label2.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(311, 17);
+            this.label2.Size = new System.Drawing.Size(310, 17);
             this.label2.TabIndex = 1;
-            this.label2.Text = "Export the selected mdb file into 1 single obj file.";
+            this.label2.Text = "Export the selected mdb file into 1 single 3D file.";
             // 
             // flowLayoutPanel2
             // 
@@ -113,9 +113,9 @@
             this.label4.Location = new System.Drawing.Point(8, 5);
             this.label4.Margin = new System.Windows.Forms.Padding(3, 0, 3, 5);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(315, 17);
+            this.label4.Size = new System.Drawing.Size(314, 17);
             this.label4.TabIndex = 0;
-            this.label4.Text = "1 mdb to 1 obj";
+            this.label4.Text = "1 mdb to 1 3D file";
             // 
             // label5
             // 
@@ -125,9 +125,9 @@
             this.label5.Location = new System.Drawing.Point(8, 27);
             this.label5.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(315, 17);
+            this.label5.Size = new System.Drawing.Size(314, 17);
             this.label5.TabIndex = 1;
-            this.label5.Text = "Export the selected mdb file to 1 obj file for each.";
+            this.label5.Text = "Export the selected mdb file to 1 3D file for each.";
             // 
             // flowLayoutPanel3
             // 
@@ -156,7 +156,7 @@
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(555, 17);
             this.label3.TabIndex = 0;
-            this.label3.Text = "1 obj to X mdb";
+            this.label3.Text = "1 3D file to X mdb";
             // 
             // label6
             // 
@@ -168,9 +168,7 @@
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(555, 68);
             this.label6.TabIndex = 1;
-            this.label6.Text = "Export the obj groups/objects to the corresponding mdb.\n" +
-            "For exemple : NavyManOWarShip_Layer1_1 and NavyManOWarShip_Layer1_2 will be exported to NavyManOWarShip_Layer1.mdb. " +
-            "This allows you to quickly create the different layers from one single obj file, and it supports lod (level of details).";
+            this.label6.Text = resources.GetString("label6.Text");
             // 
             // flowLayoutPanel4
             // 
@@ -197,9 +195,9 @@
             this.label7.Location = new System.Drawing.Point(8, 5);
             this.label7.Margin = new System.Windows.Forms.Padding(3, 0, 3, 5);
             this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(431, 17);
+            this.label7.Size = new System.Drawing.Size(437, 17);
             this.label7.TabIndex = 0;
-            this.label7.Text = "X obj to X mdb";
+            this.label7.Text = "X 3D file to X mdb";
             // 
             // label8
             // 
@@ -209,9 +207,9 @@
             this.label8.Location = new System.Drawing.Point(8, 27);
             this.label8.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(431, 17);
+            this.label8.Size = new System.Drawing.Size(437, 17);
             this.label8.TabIndex = 1;
-            this.label8.Text = "Export the selected obj file to 1 mdb for each (supports lod as well).";
+            this.label8.Text = "Export the selected 3D files to 1 mdb for each (supports lod as well).";
             // 
             // HelpWindow
             // 
