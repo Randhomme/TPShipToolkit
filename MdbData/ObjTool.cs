@@ -33,7 +33,7 @@ namespace TPShipToolkit.MdbData
         /// <param name="autoCbox">Indicates if collision boxes are automatically generated.</param>
         /// <param name="progress">Progress on the progress bar.</param>
         /// <param name="logs">Logs in the text box.</param>
-        public void ObjToXMdb(string[] objs, string mdbFolderPath, bool autoCbox, IProgress<int> progress, IProgress<string> logs)
+        public void ObjToXMdb(string[] objs, string mdbFolderPath, IProgress<int> progress, IProgress<string> logs)
         {
             try
             {
@@ -77,33 +77,6 @@ namespace TPShipToolkit.MdbData
                         continue;
                     }
                     groups.Sort((x, y) => NaturalStringComparer.CompareNatural(x.groupName, y.groupName));
-                    if(!autoCbox)
-                    {
-                        var cboxPath = Path.ChangeExtension(objPath, "txt");
-                        try
-                        {
-                            using (StreamReader cboxReader = new StreamReader(File.OpenRead(cboxPath)))
-                            {
-                                logs.Report("Reading collision box file ...\n");
-                                watch.Restart();
-                                ReadCbox(cboxReader);
-                                watch.Stop();
-                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                logs.Report("Reading collision boxes values ...\n");
-                                watch.Restart();
-                                foreach (var cboxGroup in cboxGroups)
-                                {
-                                    ReadCboxValues(cboxGroup.parentBox, logs);
-                                }
-                                watch.Stop();
-                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                            }
-                        }
-                        catch
-                        {
-                            logs.Report("Unable to read collision box file.\n");
-                        }
-                    }
                     string currentFileName = string.Empty;
                     BinaryWriter mdbWriter = null;
                     List<(string matName, List<ObjTriangle> tris)> hitBox = null;
@@ -138,47 +111,17 @@ namespace TPShipToolkit.MdbData
                                         var pos = mdbWriter.BaseStream.Position;
                                         mdbWriter.Write(0);
                                         mdbWriter.Write(1);
-                                        if (autoCbox)
-                                        {
-                                            logs.Report("Creating collision boxes ... ");
-                                            watch.Restart();
-                                            var box = new CollisionBox();
-                                            AutoGenerateCBox(box, hitBox);
-                                            watch.Stop();
-                                            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                            logs.Report("Writing collision boxes ... ");
-                                            watch.Restart();
-                                            WriteCollisionBox(mdbWriter, box, tCount);
-                                            watch.Stop();
-                                            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                        }
-                                        else
-                                        {
-                                            CollisionBox box = cboxGroups.Find((g) => g.meshName.Equals(currentFileName)).parentBox;
-                                            if (box != null)
-                                            {
-                                                logs.Report("Writing collision boxes ... ");
-                                                watch.Restart();
-                                                WriteCollisionBox(mdbWriter, box, tCount);
-                                                watch.Stop();
-                                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                            }
-                                            else
-                                            {
-                                                logs.Report("No collision boxes found for " + currentFileName + ".\n");
-                                                logs.Report("Creating new collision boxes ... ");
-                                                watch.Restart();
-                                                box = new CollisionBox();
-                                                AutoGenerateCBox(box, hitBox);
-                                                watch.Stop();
-                                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                                logs.Report("Writing collision boxes ... ");
-                                                watch.Restart();
-                                                WriteCollisionBox(mdbWriter, box, tCount);
-                                                watch.Stop();
-                                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                            }
-                                        }
+                                        logs.Report("Creating collision boxes ... ");
+                                        watch.Restart();
+                                        var box = new CollisionBox();
+                                        AutoGenerateCBox(box, hitBox);
+                                        watch.Stop();
+                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                                        logs.Report("Writing collision boxes ... ");
+                                        watch.Restart();
+                                        WriteCollisionBox(mdbWriter, box, tCount);
+                                        watch.Stop();
+                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                                         mdbWriter.Write(17); //max level
                                         mdbWriter.Write(5);
                                         logs.Report("Writing hitbox ... ");
@@ -257,47 +200,17 @@ namespace TPShipToolkit.MdbData
                                 var pos = mdbWriter.BaseStream.Position;
                                 mdbWriter.Write(0);
                                 mdbWriter.Write(1);
-                                if (autoCbox)
-                                {
-                                    logs.Report("Creating collision boxes ... ");
-                                    watch.Restart();
-                                    var box = new CollisionBox();
-                                    AutoGenerateCBox(box, hitBox);
-                                    watch.Stop();
-                                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    logs.Report("Writing collision boxes ... ");
-                                    watch.Restart();
-                                    WriteCollisionBox(mdbWriter, box, tCount);
-                                    watch.Stop();
-                                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                }
-                                else
-                                {
-                                    CollisionBox box = cboxGroups.Find((g) => g.meshName.Equals(currentFileName)).parentBox;
-                                    if (box != null)
-                                    {
-                                        logs.Report("Writing collision boxes ... ");
-                                        watch.Restart();
-                                        WriteCollisionBox(mdbWriter, box, tCount);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    }
-                                    else
-                                    {
-                                        logs.Report("No collision boxes found for " + currentFileName + ".\n");
-                                        logs.Report("Creating new collision boxes ... ");
-                                        watch.Restart();
-                                        box = new CollisionBox();
-                                        AutoGenerateCBox(box, hitBox);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                        logs.Report("Writing collision boxes ... ");
-                                        watch.Restart();
-                                        WriteCollisionBox(mdbWriter, box, tCount);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    }
-                                }
+                                logs.Report("Creating collision boxes ... ");
+                                watch.Restart();
+                                var box = new CollisionBox();
+                                AutoGenerateCBox(box, hitBox);
+                                watch.Stop();
+                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                                logs.Report("Writing collision boxes ... ");
+                                watch.Restart();
+                                WriteCollisionBox(mdbWriter, box, tCount);
+                                watch.Stop();
+                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                                 mdbWriter.Write(17); //max level
                                 mdbWriter.Write(5);
                                 logs.Report("Writing hitbox ... ");
@@ -355,7 +268,7 @@ namespace TPShipToolkit.MdbData
         /// <param name="autoCbox">Indicates if collision boxes are automatically generated.</param>
         /// <param name="progress">Progress on the progress bar.</param>
         /// <param name="logs">Logs in the text box.</param>
-        public void XObjToXMdb(string[] objs, string mdbFolderPath, bool autoCbox, IProgress<int> progress, IProgress<string> logs)
+        public void XObjToXMdb(string[] objs, string mdbFolderPath, IProgress<int> progress, IProgress<string> logs)
         {
             try
             {
@@ -392,33 +305,6 @@ namespace TPShipToolkit.MdbData
                         logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                     }
                     groups.Sort((x, y) => NaturalStringComparer.CompareNatural(x.groupName, y.groupName));
-                    if (!autoCbox)
-                    {
-                        var cboxPath = Path.ChangeExtension(objPath, "txt");
-                        try
-                        {
-                            using (StreamReader cboxReader = new StreamReader(File.OpenRead(cboxPath)))
-                            {
-                                logs.Report("Reading collision box file ... ");
-                                watch.Restart();
-                                ReadCbox(cboxReader);
-                                watch.Stop();
-                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                logs.Report("Reading collision boxes values ... \n");
-                                watch.Restart();
-                                foreach (var cboxGroup in cboxGroups)
-                                {
-                                    ReadCboxValues(cboxGroup.parentBox, logs);
-                                }
-                                watch.Stop();
-                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                            }
-                        }
-                        catch
-                        {
-                            logs.Report("Unable to read collision box file.\n");
-                        }
-                    }
                     try
                     {
                         using (BinaryWriter mdbWriter = new BinaryWriter(File.Open(Path.Combine(mdbFolderPath, currentFileName), FileMode.Create)))
@@ -471,47 +357,17 @@ namespace TPShipToolkit.MdbData
                                 var pos = mdbWriter.BaseStream.Position;
                                 mdbWriter.Write(0);
                                 mdbWriter.Write(1);
-                                if (autoCbox)
-                                {
-                                    logs.Report("Creating collision boxes ... ");
-                                    watch.Restart();
-                                    var box = new CollisionBox();
-                                    AutoGenerateCBox(box, hitBox);
-                                    watch.Stop();
-                                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    logs.Report("Writing collision boxes ... ");
-                                    watch.Restart();
-                                    WriteCollisionBox(mdbWriter, box, tCount);
-                                    watch.Stop();
-                                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                }
-                                else
-                                {
-                                    CollisionBox box = cboxGroups.Find((g) => g.meshName.Equals(currentFileName)).parentBox;
-                                    if (box != null)
-                                    {
-                                        logs.Report("Writing collision boxes ... ");
-                                        watch.Restart();
-                                        WriteCollisionBox(mdbWriter, box, tCount);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    }
-                                    else
-                                    {
-                                        logs.Report("No collision boxes found for " + currentFileName + ".\n");
-                                        logs.Report("Creating new collision boxes ... ");
-                                        watch.Restart();
-                                        box = new CollisionBox();
-                                        AutoGenerateCBox(box, hitBox);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                        logs.Report("Writing collision boxes ... ");
-                                        watch.Restart();
-                                        WriteCollisionBox(mdbWriter, box, tCount);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    }
-                                }
+                                logs.Report("Creating collision boxes ... ");
+                                watch.Restart();
+                                var box = new CollisionBox();
+                                AutoGenerateCBox(box, hitBox);
+                                watch.Stop();
+                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                                logs.Report("Writing collision boxes ... ");
+                                watch.Restart();
+                                WriteCollisionBox(mdbWriter, box, tCount);
+                                watch.Stop();
+                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                                 mdbWriter.Write(17); //max level
                                 mdbWriter.Write(5);
                                 logs.Report("Writing hitbox ... ");
@@ -724,101 +580,6 @@ namespace TPShipToolkit.MdbData
                     throw new Exception("Material count can't exceed 65536.");
                 finalMat.Add(mat);
             }
-        }
-
-        private void ReadCbox(StreamReader cboxReader)
-        {
-            var cboxGroup = (string.Empty, new List<CollisionBox>());
-            string line;
-            char[] separator = { '\t' };
-            while((line = cboxReader.ReadLine())!=null)
-            {
-                if(line.StartsWith("MESH\t"))
-                {
-                    //add the group to the list if it's not empty
-                    if(cboxGroup.Item2.Count>0)
-                    {
-                        cboxGroups.Add((cboxGroup.Item1, cboxGroup.Item2[0]));
-                        cboxGroup.Item2.Clear();
-                    }
-                    cboxGroup.Item1 = line.Substring(5);
-                }
-                else if(line.StartsWith("CBOX\t"))
-                {
-                    //if we have a mesh for the box
-                    if(!string.IsNullOrWhiteSpace(cboxGroup.Item1))
-                    {
-                        var s = line.Split(separator, 4, StringSplitOptions.RemoveEmptyEntries);
-                        CollisionBox box;
-                        try
-                        {
-                            //get the box if it exists
-                            box = cboxGroup.Item2.Find((b) => b.BoxName.Equals(s[1]));
-                        }
-                        catch
-                        {
-                            //if any trouble to get the box name, go to next line
-                            continue;
-                        }
-                        //if we haven't created the box yet
-                        if(box is null)
-                        {
-                            box = new CollisionBox() { BoxName = s[1] };
-                            cboxGroup.Item2.Add(box);
-                            try
-                            {
-                                //set leftchild
-                                var leftChild = cboxGroup.Item2.Find((b) => b.BoxName.Equals(s[2]));
-                                if(leftChild is null)
-                                {
-                                    leftChild = new CollisionBox() { BoxName = s[2], Level = box.Level + 1 };
-                                    cboxGroup.Item2.Add(leftChild);
-                                }
-                                box.Leftchild = leftChild;
-                                //set rightchild
-                                var rightChild = cboxGroup.Item2.Find((b) => b.BoxName.Equals(s[3]));
-                                if (rightChild is null)
-                                {
-                                    rightChild = new CollisionBox() { BoxName = s[3], Level = box.Level + 1 };
-                                    cboxGroup.Item2.Add(rightChild);
-                                }
-                                box.Rightchild = rightChild;
-                            }
-                            //catch s[2] or s[3] null if we don't have leftchild and/or rightchild
-                            catch { }
-                        }
-                        //if the box already exists, and is not level 5 or higher in the tree
-                        //if the box level is >= 5, ignore it (for now)
-                        else if(box.Level < 5)
-                        {
-                            try
-                            {
-                                //set leftchild
-                                var leftChild = cboxGroup.Item2.Find((b) => b.BoxName.Equals(s[2]));
-                                if (leftChild is null)
-                                {
-                                    leftChild = new CollisionBox() { BoxName = s[2], Level = box.Level + 1 };
-                                    cboxGroup.Item2.Add(leftChild);
-                                }
-                                box.Leftchild = leftChild;
-                                //set rightchild
-                                var rightChild = cboxGroup.Item2.Find((b) => b.BoxName.Equals(s[3]));
-                                if (rightChild is null)
-                                {
-                                    rightChild = new CollisionBox() { BoxName = s[3], Level = box.Level + 1 };
-                                    cboxGroup.Item2.Add(rightChild);
-                                }
-                                box.Rightchild = rightChild;
-                            }
-                            //catch s[2] or s[3] null if we don't have leftchild and/or rightchild
-                            catch { }
-                        }
-                    }
-                }
-            }
-            //don't forget to add the last group to the list if it's not empty
-            if (cboxGroup.Item2.Count > 0)
-                cboxGroups.Add((cboxGroup.Item1, cboxGroup.Item2[0]));
         }
 
         private void ReadCboxValues(CollisionBox box, IProgress<string> logs)
@@ -1214,8 +975,11 @@ namespace TPShipToolkit.MdbData
                     else
                         mdbWriter.Write((float)-Math.Acos(-pVn.Z));
                     mdbWriter.Write((float)Math.Asin(pVn.Y));
-                    //FF FF FF FF
-                    mdbWriter.Write(-1);
+                    //rgba
+                    mdbWriter.Write((byte)255);
+                    mdbWriter.Write((byte)0);
+                    mdbWriter.Write((byte)0);
+                    mdbWriter.Write((byte)255);
                 }
                 catch
                 {
@@ -1277,30 +1041,24 @@ namespace TPShipToolkit.MdbData
                 mdbWriter.Write(taillebloc);
                 mdbWriter.Write(texture.Length);
                 mdbWriter.Write(Encoding.Default.GetBytes(texture));
-                for (int j = 0; j < 8; j++)
-                {
-                    //00 00 80 3F
-                    mdbWriter.Write(1065353216);
-                }
-                for (int j = 0; j < 3; j++)
-                {
-                    //00 00 00 00
-                    mdbWriter.Write(0);
-                }
-                //00 00 80 3F
-                mdbWriter.Write(1065353216);
-                for (int j = 0; j < 3; j++)
-                {
-                    //00 00 00 00
-                    mdbWriter.Write(0);
-                }
-                //00 00 80 3F
-                mdbWriter.Write(1065353216);
-                for (int j = 0; j < 2; j++)
-                {
-                    //00 00 00 00
-                    mdbWriter.Write(0);
-                }
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
             }
             mdbWriter.Write(0); //bones count, maybe one day
         }
@@ -1327,7 +1085,7 @@ namespace TPShipToolkit.MdbData
             mdbWriter.Write(diag);
         }
 
-        private void WriteCollisionBox(BinaryWriter mdbWriter, CollisionBox box, int collisionTriangles)
+        private void WriteCollisionBox(BinaryWriter mdbWriter, CollisionBox box, int collisionTriangles) 
         {
             var pos = mdbWriter.BaseStream.Position;
             mdbWriter.Write(0);

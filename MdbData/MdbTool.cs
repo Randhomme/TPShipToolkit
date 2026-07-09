@@ -1,3 +1,7 @@
+using SharpGLTF.Geometry;
+using SharpGLTF.Geometry.VertexTypes;
+using SharpGLTF.Materials;
+using SharpGLTF.Scenes;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -28,6 +32,12 @@ namespace TPShipToolkit.MdbData
         //collision boxes for each mdb
         private CollisionBox parentBox = new CollisionBox();
 
+
+        public void XMdbTo1Glb(string[] mdbs, string glbPath, bool exportLods, IProgress<int> progress, IProgress<string> logs)
+        {
+            
+        }
+
         /// <summary>
         /// Converts X mdb file to 1 obj file.
         /// </summary>
@@ -35,7 +45,7 @@ namespace TPShipToolkit.MdbData
         /// <param name="objPath">The obj file path.</param>
         /// <param name="progress">Progress on the progress bar.</param>
         /// <param name="logs">Logs in the text box.</param>
-        public void XMdbTo1Obj(string[] mdbs, string objPath, bool exportCboxes, bool exportLods, IProgress<int> progress, IProgress<string> logs)
+        public void XMdbTo1Obj(string[] mdbs, string objPath, bool exportLods, IProgress<int> progress, IProgress<string> logs)
         {
             try
             {
@@ -54,96 +64,46 @@ namespace TPShipToolkit.MdbData
                     using (StreamWriter mtlWriter = new StreamWriter(File.Open(mtlPath, FileMode.Create, FileAccess.ReadWrite)))
                     {
                         string configPath = Path.ChangeExtension(objPath, "txt");
-                        if(exportCboxes)
+                        for (int i = 0; i < mdbs.Length; i++)
                         {
-                            using (StreamWriter configWriter = new StreamWriter(File.Open(configPath, FileMode.Create, FileAccess.ReadWrite)))
+                            string mdb, groupName;
+                            try
                             {
-                                for (int i = 0; i < mdbs.Length; i++)
+                                mdb = mdbs[i];
+                                groupName = Path.GetFileNameWithoutExtension(mdb);
+                                using (BinaryReader mdbReader = new BinaryReader(File.OpenRead(mdb)))
                                 {
-                                    string mdb, groupName;
-                                    try
-                                    {
-                                        mdb = mdbs[i];
-                                        groupName = Path.GetFileNameWithoutExtension(mdb);
-                                        using (BinaryReader mdbReader = new BinaryReader(File.OpenRead(mdb)))
-                                        {
-                                            logs.Report("Reading " + mdb + " ... ");
-                                            watch.Start();
-                                            ReadMdb(mdbReader, groupName, exportLods);
-                                            watch.Stop();
-                                            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                            logs.Report("Writing obj ... ");
-                                            watch.Restart();
-                                            WriteObj(objWriter, configWriter, groupName);
-                                            watch.Stop();
-                                            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                        }
-                                        progress.Report(i + 1);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logs.Report(ex.Message);
-                                        progress.Report(i + 1);
-                                        continue;
-                                    }
-                                }
-                                try
-                                {
-                                    logs.Report("Writing mtl ... ");
+                                    logs.Report("Reading " + mdb + " ... ");
+                                    watch.Start();
+                                    ReadMdb(mdbReader, groupName, exportLods);
+                                    watch.Stop();
+                                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                                    logs.Report("Writing obj ... ");
                                     watch.Restart();
-                                    WriteMtl(mtlWriter);
+                                    WriteObj(objWriter, null, groupName);
                                     watch.Stop();
                                     logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                                 }
-                                catch (Exception ex)
-                                {
-                                    logs.Report(ex.Message);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            for (int i = 0; i < mdbs.Length; i++)
-                            {
-                                string mdb, groupName;
-                                try
-                                {
-                                    mdb = mdbs[i];
-                                    groupName = Path.GetFileNameWithoutExtension(mdb);
-                                    using (BinaryReader mdbReader = new BinaryReader(File.OpenRead(mdb)))
-                                    {
-                                        logs.Report("Reading " + mdb + " ... ");
-                                        watch.Start();
-                                        ReadMdb(mdbReader, groupName, exportLods);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                        logs.Report("Writing obj ... ");
-                                        watch.Restart();
-                                        WriteObj(objWriter, null, groupName);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    }
-                                    progress.Report(i + 1);
-                                }
-                                catch (Exception ex)
-                                {
-                                    logs.Report(ex.Message);
-                                    progress.Report(i + 1);
-                                    continue;
-                                }
-                            }
-                            try
-                            {
-                                logs.Report("Writing mtl ... ");
-                                watch.Restart();
-                                WriteMtl(mtlWriter);
-                                watch.Stop();
-                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                                progress.Report(i + 1);
                             }
                             catch (Exception ex)
                             {
                                 logs.Report(ex.Message);
+                                progress.Report(i + 1);
+                                continue;
                             }
+                        }
+                        try
+                        {
+                            logs.Report("Writing mtl ... ");
+                            watch.Restart();
+                            WriteMtl(mtlWriter);
+                            watch.Stop();
+                            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                        }
+                        catch (Exception ex)
+                        {
+                            logs.Report(ex.Message);
                         }
                     }
                 }
@@ -161,121 +121,61 @@ namespace TPShipToolkit.MdbData
         /// <param name="objFolderPath">The folder path to export the obj file(s).</param>
         /// <param name="progress">Progress on the progress bar.</param>
         /// <param name="logs">Logs in the text box.</param>
-        public void XMdbToXObj(string[] mdbs, string objFolderPath, bool exportCboxes, bool exportLods, IProgress<int> progress, IProgress<string> logs)
+        public void XMdbToXObj(string[] mdbs, string objFolderPath, bool exportLods, IProgress<int> progress, IProgress<string> logs)
         {
             try
             {
                 var watch = new System.Diagnostics.Stopwatch();
-                if(exportCboxes)
+                for (int i = 0; i < mdbs.Length; i++)
                 {
-                    for (int i = 0; i < mdbs.Length; i++)
+                    try
                     {
-                        try
+                        var mdb = mdbs[i];
+                        var groupName = Path.GetFileNameWithoutExtension(mdb);
+                        using (BinaryReader mdbReader = new BinaryReader(File.OpenRead(mdb)))
                         {
-                            var mdb = mdbs[i];
-                            var groupName = Path.GetFileNameWithoutExtension(mdb);
-                            using (BinaryReader mdbReader = new BinaryReader(File.OpenRead(mdb)))
+                            logs.Report("Reading " + mdb + " ... ");
+                            watch.Start();
+                            ReadMdb(mdbReader, groupName, exportLods);
+                            watch.Stop();
+                            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                            progress.Report(i + 1);
+                        }
+                        var objPath = Path.Combine(objFolderPath, Path.GetFileName(Path.ChangeExtension(mdb, "obj")));
+                        var mtlPath = Path.ChangeExtension(objPath, "mtl");
+                        var configPath = Path.ChangeExtension(objPath, "txt");
+                        using (StreamWriter objWriter = new StreamWriter(File.Open(objPath, FileMode.Create, FileAccess.ReadWrite)))
+                        {
+                            using (StreamWriter mtlWriter = new StreamWriter(File.Open(mtlPath, FileMode.Create, FileAccess.ReadWrite)))
                             {
-                                logs.Report("Reading " + mdb + " ... ");
-                                watch.Start();
-                                ReadMdb(mdbReader, groupName, exportLods);
+                                logs.Report("Writing obj ... ");
+                                watch.Restart();
+                                try
+                                {
+                                    objWriter.WriteLine("mtllib " + Path.GetFileName(mtlPath));
+                                }
+                                catch
+                                {
+                                    throw new Exception("Unable to write mtl name.");
+                                }
+                                WriteObj(objWriter, null, groupName);
+                                watch.Stop();
+                                gVCount = gVtCount = gVnCount = 1;
+                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                                logs.Report("Writing mtl ... ");
+                                watch.Restart();
+                                WriteMtl(mtlWriter);
                                 watch.Stop();
                                 logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                             }
-                            var objPath = Path.Combine(objFolderPath, Path.GetFileName(Path.ChangeExtension(mdb, "obj")));
-                            var mtlPath = Path.ChangeExtension(objPath, "mtl");
-                            var configPath = Path.ChangeExtension(objPath, "txt");
-                            using (StreamWriter objWriter = new StreamWriter(File.Open(objPath, FileMode.Create, FileAccess.ReadWrite)))
-                            {
-                                using (StreamWriter mtlWriter = new StreamWriter(File.Open(mtlPath, FileMode.Create, FileAccess.ReadWrite)))
-                                {
-                                    using (StreamWriter configWriter = new StreamWriter(File.Open(configPath, FileMode.Create, FileAccess.ReadWrite)))
-                                    {
-                                        logs.Report("Writing obj ... ");
-                                        watch.Restart();
-                                        try
-                                        {
-                                            objWriter.WriteLine("mtllib " + Path.GetFileName(mtlPath));
-                                        }
-                                        catch
-                                        {
-                                            throw new Exception("Unable to write mtl name.");
-                                        }
-                                        WriteObj(objWriter, configWriter, groupName);
-                                        watch.Stop();
-                                        gVCount = gVtCount = gVnCount = 1;
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                        logs.Report("Writing mtl ... ");
-                                        watch.Restart();
-                                        WriteMtl(mtlWriter);
-                                        watch.Stop();
-                                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    }
-                                }
-                            }
-                            progress.Report(i + 1);
                         }
-                        catch(Exception ex)
-                        {
-                            logs.Report(ex.Message);
-                            progress.Report(i + 1);
-                            continue;
-                        }
+                        progress.Report(i + 1);
                     }
-                }
-                else
-                {
-                    for (int i = 0; i < mdbs.Length; i++)
+                    catch (Exception ex)
                     {
-                        try
-                        {
-                            var mdb = mdbs[i];
-                            var groupName = Path.GetFileNameWithoutExtension(mdb);
-                            using (BinaryReader mdbReader = new BinaryReader(File.OpenRead(mdb)))
-                            {
-                                logs.Report("Reading " + mdb + " ... ");
-                                watch.Start();
-                                ReadMdb(mdbReader, groupName, exportLods);
-                                watch.Stop();
-                                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                progress.Report(i + 1);
-                            }
-                            var objPath = Path.Combine(objFolderPath, Path.GetFileName(Path.ChangeExtension(mdb, "obj")));
-                            var mtlPath = Path.ChangeExtension(objPath, "mtl");
-                            var configPath = Path.ChangeExtension(objPath, "txt");
-                            using (StreamWriter objWriter = new StreamWriter(File.Open(objPath, FileMode.Create, FileAccess.ReadWrite)))
-                            {
-                                using (StreamWriter mtlWriter = new StreamWriter(File.Open(mtlPath, FileMode.Create, FileAccess.ReadWrite)))
-                                {
-                                    logs.Report("Writing obj ... ");
-                                    watch.Restart();
-                                    try
-                                    {
-                                        objWriter.WriteLine("mtllib " + Path.GetFileName(mtlPath));
-                                    }
-                                    catch
-                                    {
-                                        throw new Exception("Unable to write mtl name.");
-                                    }
-                                    WriteObj(objWriter, null, groupName);
-                                    watch.Stop();
-                                    gVCount = gVtCount = gVnCount = 1;
-                                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                    logs.Report("Writing mtl ... ");
-                                    watch.Restart();
-                                    WriteMtl(mtlWriter);
-                                    watch.Stop();
-                                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                                }
-                            }
-                            progress.Report(i + 1);
-                        }
-                        catch (Exception ex)
-                        {
-                            logs.Report(ex.Message);
-                            progress.Report(i + 1);
-                            continue;
-                        }
+                        logs.Report(ex.Message);
+                        progress.Report(i + 1);
+                        continue;
                     }
                 }
             }
@@ -649,120 +549,7 @@ namespace TPShipToolkit.MdbData
                 gVtCount += group.vCount;
                 gVnCount += group.vCount;
             }
-            try
-            {
-                if(configWriter!=null) //it is null only if we don't want to export the cboxes
-                {
-                    configWriter.WriteLine("MESH\t" + groupName);
-                    WriteBox(objWriter, configWriter, parentBox);
-                }
-            }
-            catch
-            {
-                ClearLists();
-                throw new Exception("Unable to write collision box of the file.\n");
-            }
             ClearLists();
-        }
-
-        /// <summary>
-        /// Write the boxes in the obj file.
-        /// </summary>
-        /// <param name="objWriter">The obj file we are writing the boxes in.</param>
-        /// <param name="configWriter">The txt file used to get the box back when doing obj to mdb.</param>
-        /// <param name="box">Box box, box box</param>
-        private void WriteBox(StreamWriter objWriter, StreamWriter configWriter, CollisionBox box)
-        {
-            //box points
-            Vector3 a, b, c, d, e, f, g, h;
-            a = b = c = d = e = f = g = h = box.Position;
-            float X, Y, Z;
-            //Orientation cross
-            X = box.OCross.X * box.Length.X;
-            a.X += X; b.X += X; c.X += X; d.X += X;
-            e.X -= X; f.X -= X; g.X -= X; h.X -= X;
-            Y = box.OCross.Y * box.Length.X;
-            a.Y += Y; b.Y += Y; c.Y += Y; d.Y += Y;
-            e.Y -= Y; f.Y -= Y; g.Y -= Y; h.Y -= Y;
-            Z = box.OCross.Z * box.Length.X;
-            a.Z += Z; b.Z += Z; c.Z += Z; d.Z += Z;
-            e.Z -= Z; f.Z -= Z; g.Z -= Z; h.Z -= Z;
-            //Orientation up
-            X = box.OUp.X * box.Length.Y;
-            a.X += X; c.X += X; f.X += X; g.X += X;
-            b.X -= X; d.X -= X; e.X -= X; h.X -= X;
-            Y = box.OUp.Y * box.Length.Y;
-            a.Y += Y; c.Y += Y; f.Y += Y; g.Y += Y;
-            b.Y -= Y; d.Y -= Y; e.Y -= Y; h.Y -= Y;
-            Z = box.OUp.Z * box.Length.Y;
-            a.Z += Z; c.Z += Z; f.Z += Z; g.Z += Z;
-            b.Z -= Z; d.Z -= Z; e.Z -= Z; h.Z -= Z;
-            //Orientation forward
-            X = box.OForward.X * box.Length.Z;
-            a.X += X; b.X += X; g.X += X; h.X += X;
-            c.X -= X; d.X -= X; e.X -= X; f.X -= X;
-            Y = box.OForward.Y * box.Length.Z;
-            a.Y += Y; b.Y += Y; g.Y += Y; h.Y += Y;
-            c.Y -= Y; d.Y -= Y; e.Y -= Y; f.Y -= Y;
-            Z = box.OForward.Z * box.Length.Z;
-            a.Z += Z; b.Z += Z; g.Z += Z; h.Z += Z;
-            c.Z -= Z; d.Z -= Z; e.Z -= Z; f.Z -= Z;
-
-            //write box points
-            objWriter.WriteLine("v " + a.X + " " + a.Y + " " + a.Z);
-            objWriter.WriteLine("v " + b.X + " " + b.Y + " " + b.Z);
-            objWriter.WriteLine("v " + c.X + " " + c.Y + " " + c.Z);
-            objWriter.WriteLine("v " + d.X + " " + d.Y + " " + d.Z);
-            objWriter.WriteLine("v " + e.X + " " + e.Y + " " + e.Z);
-            objWriter.WriteLine("v " + f.X + " " + f.Y + " " + f.Z);
-            objWriter.WriteLine("v " + g.X + " " + g.Y + " " + g.Z);
-            objWriter.WriteLine("v " + h.X + " " + h.Y + " " + h.Z);
-
-            //write box tris
-            objWriter.WriteLine("o " + box.BoxName);
-            objWriter.WriteLine("g " + box.BoxName);
-            objWriter.WriteLine("f " + (gVCount + 0) + " " + (gVCount + 1) + " " + (gVCount + 2));
-            objWriter.WriteLine("f " + (gVCount + 3) + " " + (gVCount + 4) + " " + (gVCount + 2));
-            objWriter.WriteLine("f " + (gVCount + 5) + " " + (gVCount + 6) + " " + (gVCount + 2));
-            objWriter.WriteLine("f " + (gVCount + 4) + " " + (gVCount + 7) + " " + (gVCount + 5));
-            objWriter.WriteLine("f " + (gVCount + 6) + " " + (gVCount + 7) + " " + (gVCount + 0));
-            objWriter.WriteLine("f " + (gVCount + 1) + " " + (gVCount + 7) + " " + (gVCount + 3));
-            objWriter.WriteLine("f " + (gVCount + 6) + " " + (gVCount + 0) + " " + (gVCount + 2));
-            objWriter.WriteLine("f " + (gVCount + 7) + " " + (gVCount + 1) + " " + (gVCount + 0));
-            objWriter.WriteLine("f " + (gVCount + 1) + " " + (gVCount + 3) + " " + (gVCount + 2));
-            objWriter.WriteLine("f " + (gVCount + 4) + " " + (gVCount + 5) + " " + (gVCount + 2));
-            objWriter.WriteLine("f " + (gVCount + 7) + " " + (gVCount + 6) + " " + (gVCount + 5));
-            objWriter.WriteLine("f " + (gVCount + 7) + " " + (gVCount + 4) + " " + (gVCount + 3));
-
-            gVCount += 8;
-
-            //write childs
-            if (box.Leftchild != null)
-            {
-                if (box.Rightchild != null)
-                {
-                    configWriter.WriteLine("CBOX\t" + box.BoxName + "\t" + box.Leftchild.BoxName + "\t" + box.Rightchild.BoxName);
-                    WriteBox(objWriter, configWriter, box.Leftchild);
-                    WriteBox(objWriter, configWriter, box.Rightchild);
-                }
-                else
-                {
-                    configWriter.WriteLine("CBOX\t" + box.BoxName + "\t" + box.Leftchild.BoxName);
-                    WriteBox(objWriter, configWriter, box.Leftchild);
-                }
-            }
-            else
-            {
-                if (box.Rightchild != null)
-                {
-                    configWriter.WriteLine("CBOX\t" + box.BoxName + "\t\t" + box.Rightchild.BoxName);
-                    WriteBox(objWriter, configWriter, box.Rightchild);
-                }
-                else
-                {
-                    configWriter.WriteLine("CBOX\t" + box.BoxName);
-                }
-            }
         }
 
         /// <summary>
