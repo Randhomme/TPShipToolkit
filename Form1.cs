@@ -38,8 +38,6 @@ namespace TPShipToolkit
             radioButton2.Checked = !settings.XMdbTo1Obj;
             radioButton3.Checked = settings.ObjToXMdb;
             radioButton4.Checked = !settings.ObjToXMdb;
-            checkBox1.Checked = settings.ExportCBox;
-            checkBox2.Checked = settings.AutoCBox;
             checkBox3.Checked = settings.ExportLods;
         }
 
@@ -50,7 +48,7 @@ namespace TPShipToolkit
             helpWindow.Show();
         }
 
-        //Open mdb to obj button
+        //Open mdb to 3d file button
         private void button1_Click(object sender, System.EventArgs e)
         {
             var ofd = new OpenFileDialog
@@ -69,19 +67,32 @@ namespace TPShipToolkit
                     var sfd = new SaveFileDialog
                     {
                         DefaultExt = "obj",
-                        Filter = "Obj file (*.obj)|*.obj",
+                        Filter = "GL Transmission Format Binary (*.glb)|*.glb|Object file (*.obj)|*.obj",
                         InitialDirectory = settings.SaveObjDirectory
                     };
                     if (sfd.ShowDialog()==DialogResult.OK)
                     {
                         settings.SaveObjDirectory = Path.GetDirectoryName(sfd.FileName);
-                        var progressDialog = new ProgressDialog("Converting mdb to obj ...", ofd.FileNames.Length);
-                        var mdbTool = new MdbTool();
-                        Task.Run(() =>
+                        var progressDialog = new ProgressDialog($"Converting mdb to {Path.GetExtension(sfd.FileName)} ...", ofd.FileNames.Length);
+                        if(sfd.FilterIndex == 1) // glb
                         {
-                            mdbTool.XMdbTo1Obj(ofd.FileNames, sfd.FileName, checkBox1.Checked, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
-                            progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
-                        });
+                            var mdbTool = new MdbTool();
+                            Task.Run(() =>
+                            {
+                                mdbTool.XMdbTo1Glb(ofd.FileNames, sfd.FileName, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
+                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                            });
+                        }
+                        else // obj
+                        {
+                            var mdbTool = new MdbTool();
+                            Task.Run(() =>
+                            {
+                                mdbTool.XMdbTo1Obj(ofd.FileNames, sfd.FileName, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
+                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                            });
+                        }
+                        
                         progressDialog.ShowDialog();
                     }
                 }
@@ -89,73 +100,96 @@ namespace TPShipToolkit
                 {
                     var fbd = new FolderBrowserDialog
                     {
-                        Description = "Select the folder to export your mdb(s) to obj(s)."
+                        Description = "Select the folder to export 3d files."
                     };
                     if (fbd.ShowDialog()==DialogResult.OK)
                     {
-                        var progressDialog = new ProgressDialog("Converting mdb to obj ...", ofd.FileNames.Length);
-                        var mdbTool = new MdbTool();
-                        Task.Run(() =>
+                        var formatDialog = new ModelFileFormatDialog();
+                        formatDialog.ShowDialog();
+                        var progressDialog = new ProgressDialog($"Converting mdb to {formatDialog.SelectedFormat} ...", ofd.FileNames.Length);
+                        if(formatDialog.SelectedFormat == "glb")
                         {
-                            mdbTool.XMdbToXObj(ofd.FileNames, fbd.SelectedPath, checkBox1.Checked, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
-                            progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
-                        });
+                            var glbTool = new GlbTool();
+                            Task.Run(() =>
+                            {
+                                //glbTool.XMdbToXGlb(ofd.FileNames, fbd.SelectedPath, checkBox1.Checked, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
+                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                            });
+                        }
+                        else if (formatDialog.SelectedFormat == "obj")
+                        {
+                            var mdbTool = new MdbTool();
+                            Task.Run(() =>
+                            {
+                                mdbTool.XMdbToXObj(ofd.FileNames, fbd.SelectedPath, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
+                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                            });
+                        }
                         progressDialog.ShowDialog();
                     }
                 }
             }
         }
 
-        //Open obj to mdb button
+        //Open 3d file to mdb button
         private void button2_Click(object sender, System.EventArgs e)
         {
             var ofd = new OpenFileDialog
             {
-                DefaultExt = "obj",
-                Filter = "Object file (*.obj)|*.obj",
+                DefaultExt = "glb",
+                Filter = "GL Transmission Format Binary (*.glb)|*.glb|Object file (*.obj)|*.obj",
                 Multiselect = true,
                 RestoreDirectory = true,
-                Title = "Select one or multiple obj to convert.",
+                Title = "Select one or multiple 3d file to convert.",
                 InitialDirectory = settings.OpenObjDirectory
             };
             if (ofd.ShowDialog() == DialogResult.OK)
             {
                 settings.OpenObjDirectory = Path.GetDirectoryName(ofd.FileName);
-                if (radioButton3.Checked)
+                var fbd = new FolderBrowserDialog
                 {
-                    var fbd = new FolderBrowserDialog
-                    {
-                        Description = "Select the folder to export your obj(s) to mdb(s)."
-                    };
-                    if (fbd.ShowDialog() == DialogResult.OK)
-                    {
-                        var progressDialog = new ProgressDialog("Converting obj to mdb ...", ofd.FileNames.Length);
-                        var objTool = new ObjTool();
-                        Task.Run(() =>
-                        {
-                            objTool.ObjToXMdb(ofd.FileNames, fbd.SelectedPath, checkBox2.Checked, progressDialog.Progress, progressDialog.Logs);
-                            progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
-                        });
-                        progressDialog.ShowDialog();
-                    }
-                }
-                else if (radioButton4.Checked)
+                    Description = "Select the folder to export the mdb(s)."
+                };
+                if (fbd.ShowDialog() == DialogResult.OK)
                 {
-                    var fbd = new FolderBrowserDialog
+                    var progressDialog = new ProgressDialog($"Converting {Path.GetExtension(ofd.FileName)} to mdb ...", ofd.FileNames.Length);
+                    if (radioButton3.Checked)
                     {
-                        Description = "Select the folder to export your obj(s) to mdb(s)."
-                    };
-                    if (fbd.ShowDialog() == DialogResult.OK)
-                    {
-                        var progressDialog = new ProgressDialog("Converting obj to mdb ...", ofd.FileNames.Length);
-                        var objTool = new ObjTool();
-                        Task.Run(() =>
+                        // .glb
+                        if (ofd.FilterIndex == 1)
                         {
-                            objTool.XObjToXMdb(ofd.FileNames, fbd.SelectedPath, checkBox2.Checked, progressDialog.Progress, progressDialog.Logs);
-                            progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
-                        });
-                        progressDialog.ShowDialog();
+
+                        }
+                        // .obj
+                        else
+                        {
+                            var objTool = new ObjTool();
+                            Task.Run(() =>
+                            {
+                                objTool.ObjToXMdb(ofd.FileNames, fbd.SelectedPath, progressDialog.Progress, progressDialog.Logs);
+                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                            });
+                        }
                     }
+                    else
+                    {
+                        // .glb
+                        if (ofd.FilterIndex == 1)
+                        {
+
+                        }
+                        else
+                        {
+                            var objTool = new ObjTool();
+                            Task.Run(() =>
+                            {
+                                objTool.XObjToXMdb(ofd.FileNames, fbd.SelectedPath, progressDialog.Progress, progressDialog.Logs);
+                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                            });
+                        }
+                        
+                    }
+                    progressDialog.ShowDialog();
                 }
             }
         }
@@ -165,8 +199,6 @@ namespace TPShipToolkit
         {
             settings.XMdbTo1Obj = radioButton1.Checked;
             settings.ObjToXMdb = radioButton3.Checked;
-            settings.ExportCBox = checkBox1.Checked;
-            settings.AutoCBox = checkBox2.Checked;
             settings.ExportLods = checkBox3.Checked;
             settings.Save();
         }
