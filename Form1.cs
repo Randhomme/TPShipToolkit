@@ -105,27 +105,29 @@ namespace TPShipToolkit
                     if (fbd.ShowDialog()==DialogResult.OK)
                     {
                         var formatDialog = new ModelFileFormatDialog();
-                        formatDialog.ShowDialog();
-                        var progressDialog = new ProgressDialog($"Converting mdb to {formatDialog.SelectedFormat} ...", ofd.FileNames.Length);
-                        if(formatDialog.SelectedFormat == "glb")
+                        if(formatDialog.ShowDialog() == DialogResult.OK)
                         {
-                            //var glbTool = new GlbTool();
-                            Task.Run(() =>
+                            var progressDialog = new ProgressDialog($"Converting mdb to {formatDialog.SelectedFormat} ...", ofd.FileNames.Length);
+                            if (formatDialog.SelectedFormat == "glb")
                             {
-                                //glbTool.XMdbToXGlb(ofd.FileNames, fbd.SelectedPath, checkBox1.Checked, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
-                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
-                            });
-                        }
-                        else if (formatDialog.SelectedFormat == "obj")
-                        {
-                            var mdbTool = new MdbTool();
-                            Task.Run(() =>
+                                var glbTool = new GlbTool();
+                                Task.Run(() =>
+                                {
+                                    glbTool.XMdbToXGlb(ofd.FileNames, fbd.SelectedPath, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
+                                    progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                                });
+                            }
+                            else if (formatDialog.SelectedFormat == "obj")
                             {
-                                mdbTool.XMdbToXObj(ofd.FileNames, fbd.SelectedPath, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
-                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
-                            });
+                                var mdbTool = new MdbTool();
+                                Task.Run(() =>
+                                {
+                                    mdbTool.XMdbToXObj(ofd.FileNames, fbd.SelectedPath, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
+                                    progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                                });
+                            }
+                            progressDialog.ShowDialog();
                         }
-                        progressDialog.ShowDialog();
                     }
                 }
             }
