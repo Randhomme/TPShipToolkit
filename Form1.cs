@@ -160,7 +160,12 @@ namespace TPShipToolkit
                         // .glb
                         if (ofd.FilterIndex == 1)
                         {
-
+                            var glbTool = new GlbTool();
+                            Task.Run(() =>
+                            {
+                                glbTool.GlbToXMdb(ofd.FileNames, fbd.SelectedPath, progressDialog.Progress, progressDialog.Logs);
+                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                            });
                         }
                         // .obj
                         else
@@ -178,7 +183,12 @@ namespace TPShipToolkit
                         // .glb
                         if (ofd.FilterIndex == 1)
                         {
-
+                            var glbTool = new GlbTool();
+                            Task.Run(() =>
+                            {
+                                glbTool.XGlbToXMdb(ofd.FileNames, fbd.SelectedPath, progressDialog.Progress, progressDialog.Logs);
+                                progressDialog.Invoke(new MethodInvoker(progressDialog.EnableClose));
+                            });
                         }
                         else
                         {
