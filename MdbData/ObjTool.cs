@@ -977,8 +977,8 @@ namespace TPShipToolkit.MdbData
                     mdbWriter.Write((float)Math.Asin(pVn.Y));
                     //rgba
                     mdbWriter.Write((byte)255);
-                    mdbWriter.Write((byte)0);
-                    mdbWriter.Write((byte)0);
+                    mdbWriter.Write((byte)255);
+                    mdbWriter.Write((byte)255);
                     mdbWriter.Write((byte)255);
                 }
                 catch
