@@ -76,7 +76,7 @@ namespace TPShipToolkit
                         var progressDialog = new ProgressDialog($"Converting mdb to {Path.GetExtension(sfd.FileName)} ...", ofd.FileNames.Length);
                         if(sfd.FilterIndex == 1) // glb
                         {
-                            var mdbTool = new MdbTool();
+                            var mdbTool = new GlbTool();
                             Task.Run(() =>
                             {
                                 mdbTool.XMdbTo1Glb(ofd.FileNames, sfd.FileName, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
@@ -109,7 +109,7 @@ namespace TPShipToolkit
                         var progressDialog = new ProgressDialog($"Converting mdb to {formatDialog.SelectedFormat} ...", ofd.FileNames.Length);
                         if(formatDialog.SelectedFormat == "glb")
                         {
-                            var glbTool = new GlbTool();
+                            //var glbTool = new GlbTool();
                             Task.Run(() =>
                             {
                                 //glbTool.XMdbToXGlb(ofd.FileNames, fbd.SelectedPath, checkBox1.Checked, checkBox3.Checked, progressDialog.Progress, progressDialog.Logs);
