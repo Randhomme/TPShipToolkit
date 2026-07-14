@@ -1,7 +1,3 @@
-using SharpGLTF.Geometry;
-using SharpGLTF.Geometry.VertexTypes;
-using SharpGLTF.Materials;
-using SharpGLTF.Scenes;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -31,12 +27,6 @@ namespace TPShipToolkit.MdbData
         private List<(string groupName, uint vCount, List<(int matIndex, List<MdbTriangle> tris)> matGroups)> groups = new();
         //collision boxes for each mdb
         private CollisionBox parentBox = new CollisionBox();
-
-
-        public void XMdbTo1Glb(string[] mdbs, string glbPath, bool exportLods, IProgress<int> progress, IProgress<string> logs)
-        {
-            
-        }
 
         /// <summary>
         /// Converts X mdb file to 1 obj file.
