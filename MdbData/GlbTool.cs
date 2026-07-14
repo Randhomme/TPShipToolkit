@@ -51,112 +51,65 @@ namespace TPShipToolkit.MdbData
                 }
                 logs.Report("Exporting ...");
                 watch.Restart();
-                var glbScene = new SceneBuilder();
-                var glbMaterials = new List<MaterialBuilder>();
-                for (int i = 0; i < finalMdbMaterials.Count; i++)
-                {
-                    var finalMdbMaterial = finalMdbMaterials[i];
-                    var glbMaterial = new MaterialBuilder(finalMdbMaterial.MaterialName)
-                        .WithMetallicRoughness(0, 0.5f)
-                        .WithChannelParam(KnownChannel.SpecularFactor, KnownProperty.SpecularFactor, 0f);
-
-                    //var imageBuilder = ImageBuilder.From(new SharpGLTF.Memory.MemoryImage())
-                    try
-                    {
-                        var pngBytes = ConvertDdsToPngBytes(Form1.settings.TextureDirectory + Path.ChangeExtension(finalMdbMaterial.TextureName, "dds"));
-                        glbMaterial.WithChannelImage(KnownChannel.BaseColor, pngBytes);
-
-                    }
-                    catch (Exception ex)
-                    {
-                        logs.Report("\n" + ex.Message);
-                    }
-                    glbMaterials.Add(glbMaterial);
-                }
-                for (int i = 0; i < mdbMeshes.Count; i++)
-                {
-                    var mdbMesh = mdbMeshes[i];
-                    for(int j = 0; j < mdbMesh.MeshModels.Count; j++)
-                    {
-                        var meshModel = mdbMesh.MeshModels[j];
-                        var finalGroupName = $"{mdbMesh.GroupName}_{j}";
-                        var glbNode = new NodeBuilder(finalGroupName);
-                        var glbMesh = new MeshBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>(finalGroupName);
-                        for(int k = 0; k < meshModel.MdbTriangles.Count; k++)
-                        {
-                            var mdbTriangle = meshModel.MdbTriangles[k];
-                            var v0 = meshModel.MdbVertices[mdbTriangle.P0];
-                            var v1 = meshModel.MdbVertices[mdbTriangle.P1];
-                            var v2 = meshModel.MdbVertices[mdbTriangle.P2];
-                            var pos0 = new Vector3(v0.X, v0.Z, -v0.Y);
-                            var pos1 = new Vector3(v1.X, v1.Z, -v1.Y);
-                            var pos2 = new Vector3(v2.X, v2.Z, -v2.Y);
-                            //var n0 = NormalFromAngles(v0.NX, v0.NY);
-                            //var n1 = NormalFromAngles(v1.NX, v1.NY);
-                            //var n2 = NormalFromAngles(v2.NX, v2.NY);
-                            var n0 = Vector3.Normalize(new Vector3((float)-Math.Sin(v0.NX), (float)Math.Sin(v0.NY), (float)-Math.Cos(v0.NX)));
-                            var n1 = Vector3.Normalize(new Vector3((float)-Math.Sin(v1.NX), (float)Math.Sin(v1.NY), (float)-Math.Cos(v1.NX)));
-                            var n2 = Vector3.Normalize(new Vector3((float)-Math.Sin(v2.NX), (float)Math.Sin(v2.NY), (float)-Math.Cos(v2.NX)));
-                            var glbPrim = glbMesh.UsePrimitive(glbMaterials[mdbTriangle.TextureIndex]);
-                            var p0 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                                (new(pos0, n0), new VertexColor1Texture1(new(v0.R / 255f, v0.G / 255f, v0.B / 255f, 0), new(v0.U, v0.V)));
-                            var p1 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                                (new(pos1, n1), new VertexColor1Texture1(new(v1.R / 255f, v1.G / 255f, v1.B / 255f, 0), new(v1.U, v1.V)));
-                            var p2 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                                (new(pos2, n2), new VertexColor1Texture1(new(v2.R / 255f, v2.G / 255f, v2.B / 255f, 0), new(v2.U, v2.V)));
-                            glbPrim.AddTriangle(p2, p1, p0);
-                        }
-                        glbScene.AddNode(glbNode);
-                        glbScene.AddRigidMesh(glbMesh, glbNode);
-                    }
-                }
-                glbScene.ToGltf2().SaveGLB(glbPath);
+                WriteGlb(glbPath, logs);
                 logs.Report("\nDone in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
             }
             catch (Exception ex)
             {
                 logs.Report("\n" + ex.Message);
             }
+        }
 
-            //var imageByte = ConvertDdsToPngBytes("C:\\Users\\User0\\Desktop\\TreasurePlanet\\TP_Game\\BD_Textures\\111metal.dds");
-            
-            //var material = new MaterialBuilder()
-            //    .WithChannelImage(KnownChannel.BaseColor, imageByte);
-
-
-            //var mesh = new MeshBuilder<VertexPosition, VertexColor1Texture1>("Mesh");
-
-
-            //var cor1 = new VertexColor1Texture1(new(1, 0, 0, 0), new Vector2(0f, 0f));
-            //var cor2 = new VertexColor1Texture1(new(0, 1, 0, 0), new Vector2(0f, 1f));
-            //var cor3 = new VertexColor1Texture1(new(0, 0, 1, 0), new Vector2(1f, 1f));
-            //var cor4 = new VertexColor1Texture1(new(1, 1, 0, 0), new Vector2(1f, 0f));
-
-
-
-            //var pos1 = new VertexPosition(0, 0, 0);
-            //var pos2 = new VertexPosition(0, 1, 0);
-            //var pos3 = new VertexPosition(1, 1, 0);
-            //var pos4 = new VertexPosition(1, 0, 0);
-
-
-            //var ver1 = new VertexBuilder<VertexPosition, VertexColor1Texture1, VertexEmpty>(pos1, cor2);
-            //var ver2 = new VertexBuilder<VertexPosition, VertexColor1Texture1, VertexEmpty>(pos2, cor1);
-            //var ver3 = new VertexBuilder<VertexPosition, VertexColor1Texture1, VertexEmpty>(pos3, cor4);
-            //var ver4 = new VertexBuilder<VertexPosition, VertexColor1Texture1, VertexEmpty>(pos4, cor3);
-
-            //var prim = mesh.UsePrimitive(material);
-
-
-            //prim.AddTriangle(ver1, ver2, ver3);
-            //prim.AddTriangle(ver1, ver3, ver4);
-
-
-
-            //var scene = new SceneBuilder();
-            //scene.AddRigidMesh(mesh, Matrix4x4.Identity);
-
-            //scene.ToGltf2().SaveGLB(glbPath);
+        /// <summary>
+        /// Converts X mdb file to X obj file (1 obj for each mdb).
+        /// </summary>
+        /// <param name="mdbs">The mdb file(s) path.</param>
+        /// <param name="glbFolderPath">The folder path to export the glb file(s).</param>
+        /// <param name="progress">Progress on the progress bar.</param>
+        /// <param name="logs">Logs in the text box.</param>
+        public void XMdbToXGlb(string[] mdbs, string glbFolderPath, bool exportLods, IProgress<int> progress, IProgress<string> logs)
+        {
+            try
+            {
+                var watch = new System.Diagnostics.Stopwatch();
+                for (int i = 0; i < mdbs.Length; i++)
+                {
+                    string mdb, groupName;
+                    try
+                    {
+                        mdb = mdbs[i];
+                        groupName = Path.GetFileNameWithoutExtension(mdb);
+                        var glbPath = Path.Combine(glbFolderPath, Path.GetFileName(Path.ChangeExtension(mdb, "glb")));
+                        using (BinaryReader mdbReader = new BinaryReader(File.OpenRead(mdb)))
+                        {
+                            logs.Report("Reading " + mdb + " ... ");
+                            watch.Start();
+                            ReadMdb(mdbReader, groupName, exportLods);
+                            watch.Stop();
+                            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                        }
+                        logs.Report("Exporting ...");
+                        watch.Restart();
+                        WriteGlb(glbPath, logs);
+                        logs.Report("\nDone in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                        progress.Report(i + 1);
+                    }
+                    catch (Exception ex)
+                    {
+                        logs.Report("\n" + ex.Message);
+                        progress.Report(i + 1);
+                        continue;
+                    }
+                    finally
+                    {
+                        ClearData();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logs.Report("\n" + ex.Message);
+            }
         }
 
         Vector3 NormalFromAngles(float theta, float phi)
@@ -169,16 +122,6 @@ namespace TPShipToolkit.MdbData
         }
         private byte[] ConvertDdsToPngBytes(string ddsPath)
         {
-            //var image = TexHelper.Instance.LoadFromDDSFile(ddsPath, DDS_FLAGS.NONE);
-            //var decompressed = image.Decompress(DXGI_FORMAT.R8G8B8A8_UNORM);
-            //var stream = decompressed.SaveToWICMemory(0, WIC_FLAGS.NONE, TexHelper.Instance.GetWICCodec(WICCodecs.PNG));
-            //byte[] pngBytes;
-            //using (var ms = new MemoryStream())
-            //{
-            //    stream.CopyTo(ms);
-            //    pngBytes = ms.ToArray();
-            //}
-            //return pngBytes;
             using var dds = Pfimage.FromFile(ddsPath);
             byte[] rgba;
 
@@ -445,6 +388,86 @@ namespace TPShipToolkit.MdbData
                     }
                 }
             }
+        }
+
+        private void WriteGlb(string glbPath, IProgress<string> logs)
+        {
+            var glbScene = new SceneBuilder();
+            var glbMaterials = new List<MaterialBuilder>();
+            for (int i = 0; i < finalMdbMaterials.Count; i++)
+            {
+                var finalMdbMaterial = finalMdbMaterials[i];
+                var glbMaterial = new MaterialBuilder(finalMdbMaterial.MaterialName)
+                    .WithMetallicRoughness(0, 1f);
+
+                try
+                {
+                    var pngBytes = ConvertDdsToPngBytes(Form1.settings.TextureDirectory + Path.ChangeExtension(finalMdbMaterial.TextureName, "dds"));
+                    glbMaterial.WithChannelImage(KnownChannel.BaseColor, pngBytes);
+
+                }
+                catch (Exception ex)
+                {
+                    logs.Report("\n" + ex.Message);
+                }
+                glbMaterials.Add(glbMaterial);
+            }
+            for (int i = 0; i < mdbMeshes.Count; i++)
+            {
+                var mdbMesh = mdbMeshes[i];
+                for (int j = 0; j < mdbMesh.MeshModels.Count; j++)
+                {
+                    var meshModel = mdbMesh.MeshModels[j];
+                    var finalGroupName = $"{mdbMesh.GroupName}_{j}";
+                    var glbNode = new NodeBuilder(finalGroupName);
+                    var glbMesh = new MeshBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>(finalGroupName);
+                    for (int k = 0; k < meshModel.MdbTriangles.Count; k++)
+                    {
+                        var mdbTriangle = meshModel.MdbTriangles[k];
+                        var v0 = meshModel.MdbVertices[mdbTriangle.P0];
+                        var v1 = meshModel.MdbVertices[mdbTriangle.P1];
+                        var v2 = meshModel.MdbVertices[mdbTriangle.P2];
+                        var pos0 = new Vector3(v0.X, v0.Z, -v0.Y);
+                        var pos1 = new Vector3(v1.X, v1.Z, -v1.Y);
+                        var pos2 = new Vector3(v2.X, v2.Z, -v2.Y);
+                        //var n0 = NormalFromAngles(v0.NX, v0.NY);
+                        //var n1 = NormalFromAngles(v1.NX, v1.NY);
+                        //var n2 = NormalFromAngles(v2.NX, v2.NY);
+                        var n0 = Vector3.Normalize(new Vector3((float)-Math.Sin(v0.NX), (float)Math.Sin(v0.NY), (float)-Math.Cos(v0.NX)));
+                        var n1 = Vector3.Normalize(new Vector3((float)-Math.Sin(v1.NX), (float)Math.Sin(v1.NY), (float)-Math.Cos(v1.NX)));
+                        var n2 = Vector3.Normalize(new Vector3((float)-Math.Sin(v2.NX), (float)Math.Sin(v2.NY), (float)-Math.Cos(v2.NX)));
+                        var glbPrim = glbMesh.UsePrimitive(glbMaterials[mdbTriangle.TextureIndex]);
+                        var p0 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
+                            (new(pos0, n0), new VertexColor1Texture1(new(v0.R / 255f, v0.G / 255f, v0.B / 255f, 0), new(v0.U, v0.V)));
+                        var p1 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
+                            (new(pos1, n1), new VertexColor1Texture1(new(v1.R / 255f, v1.G / 255f, v1.B / 255f, 0), new(v1.U, v1.V)));
+                        var p2 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
+                            (new(pos2, n2), new VertexColor1Texture1(new(v2.R / 255f, v2.G / 255f, v2.B / 255f, 0), new(v2.U, v2.V)));
+                        glbPrim.AddTriangle(p2, p1, p0);
+                    }
+                    glbScene.AddNode(glbNode);
+                    glbScene.AddRigidMesh(glbMesh, glbNode);
+                }
+            }
+            glbScene.ToGltf2().SaveGLB(glbPath);
+        }
+
+        private void ClearData()
+        {
+            for (int i = 0; i < mdbMeshes.Count; i++)
+            {
+                var mdbMesh = mdbMeshes[i];
+                for (int j = 0; j < mdbMesh.MeshModels.Count; j++)
+                {
+                    var meshModel = mdbMesh.MeshModels[j];
+                    meshModel.MdbVertices.Clear();
+                    meshModel.MdbTriangles.Clear();
+                }
+                mdbMesh.MeshModels.Clear();
+            }
+            mdbMeshes.Clear();
+            currentMdbMaterials.Clear();
+            finalMdbMaterials.Clear();
         }
     }
 }
