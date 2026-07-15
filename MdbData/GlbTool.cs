@@ -3,12 +3,16 @@ using SharpGLTF.Geometry;
 using SharpGLTF.Geometry.VertexTypes;
 using SharpGLTF.Materials;
 using SharpGLTF.Scenes;
+using SharpGLTF.Schema2;
 using StbImageWriteSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Numerics;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using TPShipToolkit.MdbData.Classes;
 using TPShipToolkit.Utils;
 
@@ -20,6 +24,13 @@ namespace TPShipToolkit.MdbData
         private readonly List<MdbMaterial> currentMdbMaterials = new(); // material list of the current mdb we are reading
         private readonly List<MdbMaterial> finalMdbMaterials = new(); // material list used for the export
 
+        /// <summary>
+        /// Converts X mdb file to 1 glb file.
+        /// </summary>
+        /// <param name="mdbs">The mdb file(s) path.</param>
+        /// <param name="glbPath">The glb file path.</param>
+        /// <param name="progress">Progress on the progress bar.</param>
+        /// <param name="logs">Logs in the text box.</param>
         public void XMdbTo1Glb(string[] mdbs, string glbPath, bool exportLods, IProgress<int> progress, IProgress<string> logs)
         {
             try
@@ -61,7 +72,7 @@ namespace TPShipToolkit.MdbData
         }
 
         /// <summary>
-        /// Converts X mdb file to X obj file (1 obj for each mdb).
+        /// Converts X mdb file to X glb file (1 glb for each mdb).
         /// </summary>
         /// <param name="mdbs">The mdb file(s) path.</param>
         /// <param name="glbFolderPath">The folder path to export the glb file(s).</param>
@@ -112,6 +123,75 @@ namespace TPShipToolkit.MdbData
             }
         }
 
+        /// <summary>
+        /// Converts 1 glb file to X mdb file (by using the nodes name).
+        /// </summary>
+        /// <param name="glbs">The obj file(s) to export the mdb files from.</param>
+        /// <param name="mdbFolderPath">The folder path to export the mdb files.</param>
+        /// <param name="progress">Progress on the progress bar.</param>
+        /// <param name="logs">Logs in the text box.</param>
+        public void GlbToXMdb(string[] glbs, string mdbFolderPath, IProgress<int> progress, IProgress<string> logs)
+        {
+            foreach (var glbPath in glbs)
+            {
+                
+                //foreach (var item in glbScene.Materials)
+                //{
+                //    if (item.Extras is JsonObject obj)
+                //    {
+                //        if (obj.TryGetPropertyValue("TextureName", out var value))
+                //        {
+                //            string name = value!.GetValue<string>();
+                //        }
+                //    }
+                //    var channel = item.GetChannel(KnownChannel.BaseColor);
+                //    if (channel != null)
+                //    {
+                //        var l = channel.Texture.PrimaryImage.Name;
+                //    }
+                //}
+                try
+                {
+                    var glbScene = SceneBuilder.LoadDefaultScene(glbPath);
+                    var currentFileName = string.Empty;
+                    var instances = new List<InstanceBuilder>();
+                    foreach (var instance in glbScene.Instances)
+                    {
+                        instances.Add(instance);
+                    }
+                    instances.Sort((x, y) => NaturalStringComparer.CompareNatural(x.Name, y.Name));
+                    var groupedInstances = instances.GroupBy((i) => RealGroupName(i.Name));
+                    foreach (var group in groupedInstances)
+                    {
+                        var mdbPath = Path.Combine(mdbFolderPath, group.Key + ".mdb");
+                        using (var mdbWriter = new BinaryWriter(File.Open(mdbPath, FileMode.Create)))
+                        {
+                            WriteMdb(mdbWriter, group, logs);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logs.Report(ex.Message);
+                }
+                
+            }
+            
+        }
+
+        /// <summary>
+        /// Converts X obj file to X mdb file (1 mdb for each obj).
+        /// </summary>
+        /// <param name="objs">The obj file(s) to export the mdb files from.</param>
+        /// <param name="mdbFolderPath">The folder path to export the mdb files.</param>
+        /// <param name="autoCbox">Indicates if collision boxes are automatically generated.</param>
+        /// <param name="progress">Progress on the progress bar.</param>
+        /// <param name="logs">Logs in the text box.</param>
+        public void XGlbToXMdb(string[] glbs, string mdbFolderPath, IProgress<int> progress, IProgress<string> logs)
+        {
+
+        }
+
         Vector3 NormalFromAngles(float theta, float phi)
         {
             float x = (float)(Math.Cos(phi) * Math.Cos(theta));
@@ -120,6 +200,7 @@ namespace TPShipToolkit.MdbData
 
             return new Vector3(x, z, -y);
         }
+
         private byte[] ConvertDdsToPngBytes(string ddsPath)
         {
             using var dds = Pfimage.FromFile(ddsPath);
@@ -208,7 +289,6 @@ namespace TPShipToolkit.MdbData
             //3d model
             for (int i = 0; i < modelCount; i++)
             {
-                var meshModel = new MdbMeshModel();
                 try
                 {
                     //model block length
@@ -247,6 +327,7 @@ namespace TPShipToolkit.MdbData
                 }
                 else
                 {
+                    var meshModel = new MdbMeshModel();
                     //Vertexes
                     for (uint j = 0; j < vCount; j++)
                     {
@@ -316,8 +397,8 @@ namespace TPShipToolkit.MdbData
                     {
                         throw new Exception("Skipped\nUnable to reach the end of model " + i + " in the file.\n");
                     }
+                    mdbMesh.MeshModels.Add(meshModel);
                 }
-                mdbMesh.MeshModels.Add(meshModel);
             }
 
             //Material
@@ -390,6 +471,20 @@ namespace TPShipToolkit.MdbData
             }
         }
 
+        private string RealGroupName(string groupname)
+        {
+            int index = groupname.LastIndexOf('_');
+            if (index != -1)
+            {
+                string temp = groupname.Substring(index + 1);
+                return int.TryParse(temp, out _) ? groupname.Remove(index) : groupname;
+            }
+            else
+            {
+                return groupname;
+            }
+        }
+
         private void WriteGlb(string glbPath, IProgress<string> logs)
         {
             var glbScene = new SceneBuilder();
@@ -400,11 +495,16 @@ namespace TPShipToolkit.MdbData
                 var glbMaterial = new MaterialBuilder(finalMdbMaterial.MaterialName)
                     .WithMetallicRoughness(0, 1f);
 
+                glbMaterial.Extras = new JsonObject
+                {
+                    ["TextureName"] = Path.GetFileNameWithoutExtension(finalMdbMaterial.TextureName)
+                };
+
                 try
                 {
                     var pngBytes = ConvertDdsToPngBytes(Form1.settings.TextureDirectory + Path.ChangeExtension(finalMdbMaterial.TextureName, "dds"));
-                    glbMaterial.WithChannelImage(KnownChannel.BaseColor, pngBytes);
-
+                    var imageBuilder = ImageBuilder.From(pngBytes, Path.GetFileNameWithoutExtension(finalMdbMaterial.TextureName));
+                    glbMaterial.WithChannelImage(KnownChannel.BaseColor, imageBuilder);
                 }
                 catch (Exception ex)
                 {
@@ -438,11 +538,11 @@ namespace TPShipToolkit.MdbData
                         var n2 = Vector3.Normalize(new Vector3((float)-Math.Sin(v2.NX), (float)Math.Sin(v2.NY), (float)-Math.Cos(v2.NX)));
                         var glbPrim = glbMesh.UsePrimitive(glbMaterials[mdbTriangle.TextureIndex]);
                         var p0 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                            (new(pos0, n0), new VertexColor1Texture1(new(v0.R / 255f, v0.G / 255f, v0.B / 255f, 0), new(v0.U, v0.V)));
+                            (new(pos0, n0), new VertexColor1Texture1(new(v0.R / 255f, v0.G / 255f, v0.B / 255f, 1f), new(v0.U, -v0.V)));
                         var p1 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                            (new(pos1, n1), new VertexColor1Texture1(new(v1.R / 255f, v1.G / 255f, v1.B / 255f, 0), new(v1.U, v1.V)));
+                            (new(pos1, n1), new VertexColor1Texture1(new(v1.R / 255f, v1.G / 255f, v1.B / 255f, 1f), new(v1.U, -v1.V)));
                         var p2 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                            (new(pos2, n2), new VertexColor1Texture1(new(v2.R / 255f, v2.G / 255f, v2.B / 255f, 0), new(v2.U, v2.V)));
+                            (new(pos2, n2), new VertexColor1Texture1(new(v2.R / 255f, v2.G / 255f, v2.B / 255f, 1f), new(v2.U, -v2.V)));
                         glbPrim.AddTriangle(p2, p1, p0);
                     }
                     glbScene.AddNode(glbNode);
@@ -450,6 +550,71 @@ namespace TPShipToolkit.MdbData
                 }
             }
             glbScene.ToGltf2().SaveGLB(glbPath);
+        }
+
+        private void WriteMdb(BinaryWriter mdbWriter, IEnumerable<InstanceBuilder> instances, IProgress<string> logs)
+        {
+            var instanceIndex = 0;
+            mdbWriter.Write(0);
+            mdbWriter.Write(0);
+            mdbWriter.Write(0);
+            mdbWriter.Write(instances.Count());
+            foreach(var instance in instances)
+            {
+                var mesh = instance.Content.GetGeometryAsset();
+                var vCount = 0;
+                mdbWriter.Write(0);
+                mdbWriter.Write(instanceIndex);
+                mdbWriter.Write(0);
+                if (mesh != null)
+                {
+                    foreach(var prim in mesh.Primitives)
+                    {
+                        for (int i = 0; i < prim.Vertices.Count; i++)
+                        {
+                            mdbWriter.Write(32);
+                            var v = prim.Vertices[i];
+                            var vGeom = v.GetGeometry();
+                            var vMat = v.GetMaterial();
+                            var vPos = vGeom.GetPosition();
+                            var vTexPos = vMat.GetTexCoord(0);
+                            var vColor = vMat.GetColor(0);
+                            mdbWriter.Write(vPos.X);
+                            mdbWriter.Write(-vPos.Z);
+                            mdbWriter.Write(vPos.Y);
+                            mdbWriter.Write(vTexPos.X);
+                            mdbWriter.Write(-vTexPos.Y);
+                            if(vGeom.TryGetNormal(out var vNorm))
+                            {
+                                if (vNorm.Y < -1)
+                                    vNorm.Y = -1;
+                                else if (vNorm.Y > 1)
+                                    vNorm.Y = 1;
+                                if (vNorm.Z < -1)
+                                    vNorm.Z = -1;
+                                else if (vNorm.Z > 1)
+                                    vNorm.Z = 1;
+                                if (vNorm.X <= 0)
+                                    mdbWriter.Write((float)Math.Acos(-vNorm.Z));
+                                else
+                                    mdbWriter.Write((float)-Math.Acos(-vNorm.Z));
+                                mdbWriter.Write((float)Math.Asin(vNorm.Y));
+                            }
+                            else
+                            {
+                                mdbWriter.Write(0);
+                                mdbWriter.Write(0);
+                            }
+                            mdbWriter.Write((byte)(vColor.X * 255));
+                            mdbWriter.Write((byte)(vColor.Y * 255));
+                            mdbWriter.Write((byte)(vColor.Z * 255));
+                            mdbWriter.Write((byte)(vColor.W * 255));
+                            vCount += 1;
+                        }
+                    }
+                }
+                instanceIndex += 1;
+            }
         }
 
         private void ClearData()
