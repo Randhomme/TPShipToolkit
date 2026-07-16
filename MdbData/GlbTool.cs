@@ -7,13 +7,14 @@ using SharpGLTF.Schema2;
 using StbImageWriteSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using TPShipToolkit.MdbData.Classes;
+using TPShipToolkit.Structs;
 using TPShipToolkit.Utils;
 
 namespace TPShipToolkit.MdbData
@@ -132,28 +133,15 @@ namespace TPShipToolkit.MdbData
         /// <param name="logs">Logs in the text box.</param>
         public void GlbToXMdb(string[] glbs, string mdbFolderPath, IProgress<int> progress, IProgress<string> logs)
         {
-            foreach (var glbPath in glbs)
+            for (int i = 0; i < glbs.Length; i++)
             {
-                
-                //foreach (var item in glbScene.Materials)
-                //{
-                //    if (item.Extras is JsonObject obj)
-                //    {
-                //        if (obj.TryGetPropertyValue("TextureName", out var value))
-                //        {
-                //            string name = value!.GetValue<string>();
-                //        }
-                //    }
-                //    var channel = item.GetChannel(KnownChannel.BaseColor);
-                //    if (channel != null)
-                //    {
-                //        var l = channel.Texture.PrimaryImage.Name;
-                //    }
-                //}
+                var glbPath = glbs[i];
                 try
                 {
+                    var watch = new System.Diagnostics.Stopwatch();
+                    logs.Report("Reading " + glbPath + " ... ");
+                    watch.Start();
                     var glbScene = SceneBuilder.LoadDefaultScene(glbPath);
-                    var currentFileName = string.Empty;
                     var instances = new List<InstanceBuilder>();
                     foreach (var instance in glbScene.Instances)
                     {
@@ -161,12 +149,15 @@ namespace TPShipToolkit.MdbData
                     }
                     instances.Sort((x, y) => NaturalStringComparer.CompareNatural(x.Name, y.Name));
                     var groupedInstances = instances.GroupBy((i) => RealGroupName(i.Name));
+                    watch.Stop();
+                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                     foreach (var group in groupedInstances)
                     {
                         var mdbPath = Path.Combine(mdbFolderPath, group.Key + ".mdb");
+                        logs.Report("\n---- " + group.Key + ".mdb ----\n");
                         using (var mdbWriter = new BinaryWriter(File.Open(mdbPath, FileMode.Create)))
                         {
-                            WriteMdb(mdbWriter, group, logs);
+                            WriteMdb(mdbWriter, group, glbScene.Materials, logs, watch);
                         }
                     }
                 }
@@ -174,7 +165,10 @@ namespace TPShipToolkit.MdbData
                 {
                     logs.Report(ex.Message);
                 }
-                
+                finally
+                {
+                    progress.Report(i + 1);
+                }
             }
             
         }
@@ -552,33 +546,55 @@ namespace TPShipToolkit.MdbData
             glbScene.ToGltf2().SaveGLB(glbPath);
         }
 
-        private void WriteMdb(BinaryWriter mdbWriter, IEnumerable<InstanceBuilder> instances, IProgress<string> logs)
+        private void WriteMdb(BinaryWriter mdbWriter, IEnumerable<InstanceBuilder> instances, IEnumerable<MaterialBuilder> materials, IProgress<string> logs, System.Diagnostics.Stopwatch watch)
         {
-            var instanceIndex = 0;
+            int instanceIndex = 0, ctCount = 0;
+            float minX = 0, minY = 0, minZ = 0, maxX = 0, maxY = 0, maxZ = 0;
             mdbWriter.Write(0);
             mdbWriter.Write(0);
             mdbWriter.Write(0);
             mdbWriter.Write(instances.Count());
             foreach(var instance in instances)
             {
+                float tempMinX, tempMinY, tempMinZ, tempMaxX, tempMaxY, tempMaxZ;
+                tempMinX = tempMinY = tempMinZ = float.MaxValue;
+                tempMaxX = tempMaxY = tempMaxZ = float.MinValue;
                 var mesh = instance.Content.GetGeometryAsset();
-                var vCount = 0;
+                int vCount = 0, tCount = 0;
                 mdbWriter.Write(0);
                 mdbWriter.Write(instanceIndex);
+                var tempPos = mdbWriter.BaseStream.Position;
                 mdbWriter.Write(0);
                 if (mesh != null)
                 {
+                    logs.Report($"Writing {instance.Name} vertices ... ");
+                    watch.Restart();
                     foreach(var prim in mesh.Primitives)
                     {
                         for (int i = 0; i < prim.Vertices.Count; i++)
                         {
-                            mdbWriter.Write(32);
                             var v = prim.Vertices[i];
                             var vGeom = v.GetGeometry();
                             var vMat = v.GetMaterial();
                             var vPos = vGeom.GetPosition();
                             var vTexPos = vMat.GetTexCoord(0);
                             var vColor = vMat.GetColor(0);
+                            if(instanceIndex == 0)
+                            {
+                                if (vPos.X < tempMinX)
+                                    tempMinX = vPos.X;
+                                if (vPos.Y < tempMinY)
+                                    tempMinY = vPos.Y;
+                                if (vPos.Z < tempMinZ)
+                                    tempMinZ = vPos.Z;
+                                if (vPos.X > tempMaxX)
+                                    tempMaxX = vPos.X;
+                                if (vPos.Y > tempMaxY)
+                                    tempMaxY = vPos.Y;
+                                if (vPos.Z > tempMaxZ)
+                                    tempMaxZ = vPos.Z;
+                            }
+                            mdbWriter.Write(32);
                             mdbWriter.Write(vPos.X);
                             mdbWriter.Write(-vPos.Z);
                             mdbWriter.Write(vPos.Y);
@@ -609,12 +625,133 @@ namespace TPShipToolkit.MdbData
                             mdbWriter.Write((byte)(vColor.Y * 255));
                             mdbWriter.Write((byte)(vColor.Z * 255));
                             mdbWriter.Write((byte)(vColor.W * 255));
-                            vCount += 1;
                         }
+                        vCount += prim.Vertices.Count;
                     }
+                    if(instanceIndex == 0)
+                    {
+                        minX = tempMinX;
+                        minY = tempMinY;
+                        minZ = tempMinZ;
+                        maxX = tempMaxX;
+                        maxY = tempMaxY;
+                        maxZ = tempMaxZ;
+                    }
+                    mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
+                    mdbWriter.Write(vCount);
+                    mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+                    tempPos = mdbWriter.BaseStream.Position;
+                    watch.Stop();
+                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                    logs.Report($"Writing {instance.Name} triangles ... ");
+                    watch.Restart();
+                    foreach (var prim in mesh.Primitives)
+                    {
+                        ushort matIndex = 0, j = 0;
+                        foreach (var mat in materials)
+                        {
+                            if (prim.Material == mat)
+                            {
+                                matIndex = j;
+                                break;
+                            }
+                            j += 1;
+                        }
+                        for (int i = 0; i < prim.Triangles.Count; i++)
+                        {
+                            var t = prim.Triangles[i];
+                            mdbWriter.Write(8);
+                            mdbWriter.Write((ushort)t.C);
+                            mdbWriter.Write((ushort)t.B);
+                            mdbWriter.Write((ushort)t.A);
+                            mdbWriter.Write(matIndex);
+                        }
+                        tCount += prim.Triangles.Count;
+                    }
+                    if (instanceIndex == 0)
+                        ctCount = tCount;
+                    mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
+                    mdbWriter.Write(tCount);
+                    mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+                    watch.Stop();
+                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                    mdbWriter.Write(0); //potential animation count (or whatever this is)
                 }
                 instanceIndex += 1;
             }
+            logs.Report($"Writing textures ... ");
+            watch.Restart();
+            mdbWriter.Write(materials.Count());
+            foreach (var material in materials)
+            {
+                string texture = "NULL";
+                if (material.Extras is JsonObject obj)
+                {
+                    if (obj.TryGetPropertyValue("TextureName", out var value))
+                    {
+                        texture = Path.GetFileNameWithoutExtension(value!.GetValue<string>()) + ".tga";
+                    }
+                    else
+                    {
+                        var channel = material.GetChannel(KnownChannel.BaseColor);
+                        if (channel != null)
+                        {
+                            texture = Path.GetFileNameWithoutExtension(channel.Texture.PrimaryImage.Name) + ".tga";
+                        }
+                    }
+                }
+                else
+                {
+                    var channel = material.GetChannel(KnownChannel.BaseColor);
+                    if (channel != null)
+                    {
+                        texture = Path.GetFileNameWithoutExtension(channel.Texture.PrimaryImage.Name) + ".tga";
+                    }
+                }
+                int taillebloc = 76 + texture.Length;
+                mdbWriter.Write(taillebloc);
+                mdbWriter.Write(texture.Length);
+                mdbWriter.Write(Encoding.Default.GetBytes(texture));
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(1.0f);
+                mdbWriter.Write(0.0f);
+                mdbWriter.Write(0.0f);
+            }
+            watch.Stop();
+            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+            mdbWriter.Write(0); //bones count, maybe one day
+
+            var posx = (minX + maxX) / 2;
+            var posy = (minY + maxY) / 2;
+            var posz = (minZ + maxZ) / 2;
+            var lenx = maxX - minX;
+            var leny = maxY - minY;
+            var lenz = maxZ - minZ;
+            mdbWriter.Write(minX);
+            mdbWriter.Write(-maxZ);
+            mdbWriter.Write(minY);
+            mdbWriter.Write(maxX);
+            mdbWriter.Write(-minZ);
+            mdbWriter.Write(maxY);
+            mdbWriter.Write(posx);
+            mdbWriter.Write(-posz);
+            mdbWriter.Write(posy);
+            var diag = (float)Math.Sqrt(lenx * lenx + leny * leny + lenz * lenz) / 2;
+            mdbWriter.Write(diag);
         }
 
         private void ClearData()
