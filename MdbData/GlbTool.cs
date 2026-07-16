@@ -556,131 +556,257 @@ namespace TPShipToolkit.MdbData
             mdbWriter.Write(instances.Count());
             foreach(var instance in instances)
             {
-                float tempMinX, tempMinY, tempMinZ, tempMaxX, tempMaxY, tempMaxZ;
-                tempMinX = tempMinY = tempMinZ = float.MaxValue;
-                tempMaxX = tempMaxY = tempMaxZ = float.MinValue;
                 var mesh = instance.Content.GetGeometryAsset();
-                int vCount = 0, tCount = 0;
                 mdbWriter.Write(0);
                 mdbWriter.Write(instanceIndex);
-                var tempPos = mdbWriter.BaseStream.Position;
-                mdbWriter.Write(0);
                 if (mesh != null)
                 {
                     logs.Report($"Writing {instance.Name} vertices ... ");
                     watch.Restart();
-                    foreach(var prim in mesh.Primitives)
-                    {
-                        for (int i = 0; i < prim.Vertices.Count; i++)
-                        {
-                            var v = prim.Vertices[i];
-                            var vGeom = v.GetGeometry();
-                            var vMat = v.GetMaterial();
-                            var vPos = vGeom.GetPosition();
-                            var vTexPos = vMat.GetTexCoord(0);
-                            var vColor = vMat.GetColor(0);
-                            if(instanceIndex == 0)
-                            {
-                                if (vPos.X < tempMinX)
-                                    tempMinX = vPos.X;
-                                if (vPos.Y < tempMinY)
-                                    tempMinY = vPos.Y;
-                                if (vPos.Z < tempMinZ)
-                                    tempMinZ = vPos.Z;
-                                if (vPos.X > tempMaxX)
-                                    tempMaxX = vPos.X;
-                                if (vPos.Y > tempMaxY)
-                                    tempMaxY = vPos.Y;
-                                if (vPos.Z > tempMaxZ)
-                                    tempMaxZ = vPos.Z;
-                            }
-                            mdbWriter.Write(32);
-                            mdbWriter.Write(vPos.X);
-                            mdbWriter.Write(-vPos.Z);
-                            mdbWriter.Write(vPos.Y);
-                            mdbWriter.Write(vTexPos.X);
-                            mdbWriter.Write(-vTexPos.Y);
-                            if(vGeom.TryGetNormal(out var vNorm))
-                            {
-                                if (vNorm.Y < -1)
-                                    vNorm.Y = -1;
-                                else if (vNorm.Y > 1)
-                                    vNorm.Y = 1;
-                                if (vNorm.Z < -1)
-                                    vNorm.Z = -1;
-                                else if (vNorm.Z > 1)
-                                    vNorm.Z = 1;
-                                if (vNorm.X <= 0)
-                                    mdbWriter.Write((float)Math.Acos(-vNorm.Z));
-                                else
-                                    mdbWriter.Write((float)-Math.Acos(-vNorm.Z));
-                                mdbWriter.Write((float)Math.Asin(vNorm.Y));
-                            }
-                            else
-                            {
-                                mdbWriter.Write(0);
-                                mdbWriter.Write(0);
-                            }
-                            mdbWriter.Write((byte)(vColor.X * 255));
-                            mdbWriter.Write((byte)(vColor.Y * 255));
-                            mdbWriter.Write((byte)(vColor.Z * 255));
-                            mdbWriter.Write((byte)(vColor.W * 255));
-                        }
-                        vCount += prim.Vertices.Count;
-                    }
-                    if(instanceIndex == 0)
-                    {
-                        minX = tempMinX;
-                        minY = tempMinY;
-                        minZ = tempMinZ;
-                        maxX = tempMaxX;
-                        maxY = tempMaxY;
-                        maxZ = tempMaxZ;
-                    }
-                    mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
-                    mdbWriter.Write(vCount);
-                    mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
-                    tempPos = mdbWriter.BaseStream.Position;
-                    watch.Stop();
-                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                    logs.Report($"Writing {instance.Name} triangles ... ");
-                    watch.Restart();
-                    foreach (var prim in mesh.Primitives)
-                    {
-                        ushort matIndex = 0, j = 0;
-                        foreach (var mat in materials)
-                        {
-                            if (prim.Material == mat)
-                            {
-                                matIndex = j;
-                                break;
-                            }
-                            j += 1;
-                        }
-                        for (int i = 0; i < prim.Triangles.Count; i++)
-                        {
-                            var t = prim.Triangles[i];
-                            mdbWriter.Write(8);
-                            mdbWriter.Write((ushort)t.C);
-                            mdbWriter.Write((ushort)t.B);
-                            mdbWriter.Write((ushort)t.A);
-                            mdbWriter.Write(matIndex);
-                        }
-                        tCount += prim.Triangles.Count;
-                    }
                     if (instanceIndex == 0)
-                        ctCount = tCount;
-                    mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
-                    mdbWriter.Write(tCount);
-                    mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
-                    watch.Stop();
-                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                    {
+                        WriteVerticesInstance0ToMdb(mdbWriter, mesh, ref minX, ref minY, ref minZ, ref maxX, ref maxY, ref maxZ);
+                        watch.Stop();
+                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                        logs.Report($"Writing {instance.Name} triangles ... ");
+                        watch.Restart();
+                        WriteTrianglesInstance0ToMdb(mdbWriter, mesh, materials, ref ctCount);
+                        watch.Stop();
+                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                    }
+                    else
+                    {
+                        WriteVerticesToMdb(mdbWriter, mesh);
+                        watch.Stop();
+                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                        logs.Report($"Writing {instance.Name} triangles ... ");
+                        watch.Restart();
+                        WriteTrianglesToMdb(mdbWriter, mesh, materials);
+                        watch.Stop();
+                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                    }
                     mdbWriter.Write(0); //potential animation count (or whatever this is)
                 }
                 instanceIndex += 1;
             }
             logs.Report($"Writing textures ... ");
             watch.Restart();
+            WriteTexturesToMdb(mdbWriter, materials);
+            watch.Stop();
+            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+            mdbWriter.Write(0); //bones count, maybe one day
+            logs.Report("Writing bounding values ... ");
+            watch.Restart();
+            var posx = (minX + maxX) / 2;
+            var posy = (minY + maxY) / 2;
+            var posz = (minZ + maxZ) / 2;
+            var lenx = maxX - minX;
+            var leny = maxY - minY;
+            var lenz = maxZ - minZ;
+            mdbWriter.Write(minX);
+            mdbWriter.Write(-maxZ);
+            mdbWriter.Write(minY);
+            mdbWriter.Write(maxX);
+            mdbWriter.Write(-minZ);
+            mdbWriter.Write(maxY);
+            mdbWriter.Write(posx);
+            mdbWriter.Write(-posz);
+            mdbWriter.Write(posy);
+            var diag = (float)Math.Sqrt(lenx * lenx + leny * leny + lenz * lenz) / 2;
+            mdbWriter.Write(diag);
+            watch.Stop();
+            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+        }
+
+        private void WriteVerticesToMdb(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh)
+        {
+            var tempPos = mdbWriter.BaseStream.Position;
+            int vCount = 0;
+            mdbWriter.Write(0); // vCount
+            foreach (var prim in mesh.Primitives)
+            {
+                for (int i = 0; i < prim.Vertices.Count; i++)
+                {
+                    var v = prim.Vertices[i];
+                    var vGeom = v.GetGeometry();
+                    var vMat = v.GetMaterial();
+                    var vPos = vGeom.GetPosition();
+                    var vTexPos = vMat.GetTexCoord(0);
+                    var vColor = vMat.GetColor(0);
+                    mdbWriter.Write(32);
+                    mdbWriter.Write(vPos.X);
+                    mdbWriter.Write(-vPos.Z);
+                    mdbWriter.Write(vPos.Y);
+                    mdbWriter.Write(vTexPos.X);
+                    mdbWriter.Write(-vTexPos.Y);
+                    if (vGeom.TryGetNormal(out var vNorm))
+                    {
+                        if (vNorm.Y < -1)
+                            vNorm.Y = -1;
+                        else if (vNorm.Y > 1)
+                            vNorm.Y = 1;
+                        if (vNorm.Z < -1)
+                            vNorm.Z = -1;
+                        else if (vNorm.Z > 1)
+                            vNorm.Z = 1;
+                        if (vNorm.X <= 0)
+                            mdbWriter.Write((float)Math.Acos(-vNorm.Z));
+                        else
+                            mdbWriter.Write((float)-Math.Acos(-vNorm.Z));
+                        mdbWriter.Write((float)Math.Asin(vNorm.Y));
+                    }
+                    else
+                    {
+                        mdbWriter.Write(0);
+                        mdbWriter.Write(0);
+                    }
+                    mdbWriter.Write((byte)(vColor.X * 255));
+                    mdbWriter.Write((byte)(vColor.Y * 255));
+                    mdbWriter.Write((byte)(vColor.Z * 255));
+                    mdbWriter.Write((byte)(vColor.W * 255));
+                }
+                vCount += prim.Vertices.Count;
+            }
+            mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
+            mdbWriter.Write(vCount);
+            mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+        }
+
+        private void WriteVerticesInstance0ToMdb(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh, ref float minX, ref float minY, ref float minZ, ref float maxX, ref float maxY, ref float maxZ)
+        {
+            var tempPos = mdbWriter.BaseStream.Position;
+            int vCount = 0;
+            mdbWriter.Write(0); // vCount
+            foreach (var prim in mesh.Primitives)
+            {
+                for (int i = 0; i < prim.Vertices.Count; i++)
+                {
+                    var v = prim.Vertices[i];
+                    var vGeom = v.GetGeometry();
+                    var vMat = v.GetMaterial();
+                    var vPos = vGeom.GetPosition();
+                    var vTexPos = vMat.GetTexCoord(0);
+                    var vColor = vMat.GetColor(0);
+                    if (vPos.X < minX)
+                        minX = vPos.X;
+                    if (vPos.Y < minY)
+                        minY = vPos.Y;
+                    if (vPos.Z < minZ)
+                        minZ = vPos.Z;
+                    if (vPos.X > maxX)
+                        maxX = vPos.X;
+                    if (vPos.Y > maxY)
+                        maxY = vPos.Y;
+                    if (vPos.Z > maxZ)
+                        maxZ = vPos.Z;
+                    mdbWriter.Write(32);
+                    mdbWriter.Write(vPos.X);
+                    mdbWriter.Write(-vPos.Z);
+                    mdbWriter.Write(vPos.Y);
+                    mdbWriter.Write(vTexPos.X);
+                    mdbWriter.Write(-vTexPos.Y);
+                    if (vGeom.TryGetNormal(out var vNorm))
+                    {
+                        if (vNorm.Y < -1)
+                            vNorm.Y = -1;
+                        else if (vNorm.Y > 1)
+                            vNorm.Y = 1;
+                        if (vNorm.Z < -1)
+                            vNorm.Z = -1;
+                        else if (vNorm.Z > 1)
+                            vNorm.Z = 1;
+                        if (vNorm.X <= 0)
+                            mdbWriter.Write((float)Math.Acos(-vNorm.Z));
+                        else
+                            mdbWriter.Write((float)-Math.Acos(-vNorm.Z));
+                        mdbWriter.Write((float)Math.Asin(vNorm.Y));
+                    }
+                    else
+                    {
+                        mdbWriter.Write(0);
+                        mdbWriter.Write(0);
+                    }
+                    mdbWriter.Write((byte)(vColor.X * 255));
+                    mdbWriter.Write((byte)(vColor.Y * 255));
+                    mdbWriter.Write((byte)(vColor.Z * 255));
+                    mdbWriter.Write((byte)(vColor.W * 255));
+                }
+                vCount += prim.Vertices.Count;
+            }
+            mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
+            mdbWriter.Write(vCount);
+            mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+        }
+
+        private void WriteTrianglesToMdb(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh, IEnumerable<MaterialBuilder> materials)
+        {
+            int tCount = 0;
+            var tempPos = mdbWriter.BaseStream.Position;
+            mdbWriter.Write(0); // tCount
+            foreach (var prim in mesh.Primitives)
+            {
+                ushort matIndex = 0, j = 0;
+                foreach (var mat in materials)
+                {
+                    if (prim.Material == mat)
+                    {
+                        matIndex = j;
+                        break;
+                    }
+                    j += 1;
+                }
+                for (int i = 0; i < prim.Triangles.Count; i++)
+                {
+                    var t = prim.Triangles[i];
+                    mdbWriter.Write(8);
+                    mdbWriter.Write((ushort)(t.C + tCount));
+                    mdbWriter.Write((ushort)(t.B + tCount));
+                    mdbWriter.Write((ushort)(t.A + tCount));
+                    mdbWriter.Write(matIndex);
+                }
+                tCount += prim.Triangles.Count;
+            }
+            mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
+            mdbWriter.Write(tCount);
+            mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+        }
+
+        private void WriteTrianglesInstance0ToMdb(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh, IEnumerable<MaterialBuilder> materials, ref int ctCount)
+        {
+            int tCount = 0;
+            var tempPos = mdbWriter.BaseStream.Position;
+            mdbWriter.Write(0); // tCount
+            foreach (var prim in mesh.Primitives)
+            {
+                ushort matIndex = 0, j = 0;
+                foreach (var mat in materials)
+                {
+                    if (prim.Material == mat)
+                    {
+                        matIndex = j;
+                        break;
+                    }
+                    j += 1;
+                }
+                for (int i = 0; i < prim.Triangles.Count; i++)
+                {
+                    var t = prim.Triangles[i];
+                    mdbWriter.Write(8);
+                    mdbWriter.Write((ushort)(t.C + tCount));
+                    mdbWriter.Write((ushort)(t.B + tCount));
+                    mdbWriter.Write((ushort)(t.A + tCount));
+                    mdbWriter.Write(matIndex);
+                }
+                tCount += prim.Triangles.Count;
+            }
+            ctCount = tCount;
+            mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
+            mdbWriter.Write(tCount);
+            mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+        }
+
+        private void WriteTexturesToMdb(BinaryWriter mdbWriter, IEnumerable<MaterialBuilder> materials)
+        {
             mdbWriter.Write(materials.Count());
             foreach (var material in materials)
             {
@@ -731,27 +857,225 @@ namespace TPShipToolkit.MdbData
                 mdbWriter.Write(0.0f);
                 mdbWriter.Write(0.0f);
             }
-            watch.Stop();
-            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-            mdbWriter.Write(0); //bones count, maybe one day
+        }
 
-            var posx = (minX + maxX) / 2;
-            var posy = (minY + maxY) / 2;
-            var posz = (minZ + maxZ) / 2;
-            var lenx = maxX - minX;
-            var leny = maxY - minY;
-            var lenz = maxZ - minZ;
-            mdbWriter.Write(minX);
-            mdbWriter.Write(-maxZ);
-            mdbWriter.Write(minY);
-            mdbWriter.Write(maxX);
-            mdbWriter.Write(-minZ);
-            mdbWriter.Write(maxY);
-            mdbWriter.Write(posx);
-            mdbWriter.Write(-posz);
-            mdbWriter.Write(posy);
-            var diag = (float)Math.Sqrt(lenx * lenx + leny * leny + lenz * lenz) / 2;
-            mdbWriter.Write(diag);
+        private List<int> GetPointsFromCBoxGroup(List<(string matName, List<ObjTriangle> tris)> matGroups)
+        {
+            List<int> points = new List<int>();
+            for (int i = 0; i < matGroups.Count; i++)
+            {
+                var matGroup = matGroups[i];
+                for (int j = 0; j < matGroup.tris.Count; j++)
+                {
+                    var tri = matGroup.tris[j];
+                    bool hasFoundP0, hasFoundP1, hasFoundP2;
+                    hasFoundP0 = hasFoundP1 = hasFoundP2 = false;
+                    for (int k = 0; k < points.Count; k++)
+                    {
+                        var p = points[k];
+                        if (p == tri.P0[0])
+                        {
+                            hasFoundP0 = true;
+                            if (hasFoundP0 && hasFoundP1 && hasFoundP2)
+                                break;
+                        }
+                        if (p == tri.P1[0])
+                        {
+                            hasFoundP1 = true;
+                            if (hasFoundP0 && hasFoundP1 && hasFoundP2)
+                                break;
+                        }
+                        if (p == tri.P2[0])
+                        {
+                            hasFoundP2 = true;
+                            if (hasFoundP0 && hasFoundP1 && hasFoundP2)
+                                break;
+                        }
+                    }
+                    if (!hasFoundP0)
+                        points.Add(tri.P0[0]);
+                    if (!hasFoundP1)
+                        points.Add(tri.P1[0]);
+                    if (!hasFoundP2)
+                        points.Add(tri.P2[0]);
+                }
+            }
+            return points;
+        }
+
+        private void AutoGenerateCBox(CollisionBox box, List<(string matName, List<ObjTriangle> tris)> triangles)
+        {
+            //var points = GetPointsFromCBoxGroup(triangles);
+            AllPca(box, points, out Vector3 mean);
+            if (box.Level < 5)
+            {
+                box.Leftchild = new CollisionBox() { Level = box.Level + 1 };
+                box.Rightchild = new CollisionBox() { Level = box.Level + 1 };
+                var leftChild = new List<ObjTriangle>();
+                var rightChild = new List<ObjTriangle>();
+                var maxLength = Math.Max(box.Length.X, Math.Max(box.Length.Y, box.Length.Z));
+                if (maxLength == box.Length.X)
+                {
+                    var tempPosX = box.OCross.X * mean.X + box.OCross.Y * mean.Y + box.OCross.Z * mean.Z;
+                    for (int i = 0; i < triangles.Count; i++)
+                    {
+                        var triGroup = triangles[i];
+                        for (int j = 0; j < triGroup.tris.Count; j++)
+                        {
+                            var tri = triGroup.tris[j];
+                            Vector3 p0 = v[tri.P0[0] - 1], p1 = v[tri.P1[0] - 1], p2 = v[tri.P2[0] - 1];
+                            var center = new Vector3((Math.Min(Math.Min(p0.X, p1.X), p2.X) + Math.Max(Math.Max(p0.X, p1.X), p2.X)) / 2,
+                                                     (Math.Min(Math.Min(p0.Y, p1.Y), p2.Y) + Math.Max(Math.Max(p0.Y, p1.Y), p2.Y)) / 2,
+                                                     (Math.Min(Math.Min(p0.Z, p1.Z), p2.Z) + Math.Max(Math.Max(p0.Z, p1.Z), p2.Z)) / 2);
+                            var centerTempX = box.OCross.X * center.X + box.OCross.Y * center.Y + box.OCross.Z * center.Z;
+                            if (centerTempX < tempPosX)
+                                leftChild.Add(tri);
+                            else
+                                rightChild.Add(tri);
+                        }
+                    }
+                    AutoGenerateCBox(box.Leftchild, new List<(string, List<ObjTriangle>)> { (string.Empty, leftChild) });
+                    AutoGenerateCBox(box.Rightchild, new List<(string, List<ObjTriangle>)> { (string.Empty, rightChild) });
+                }
+                else if (maxLength == box.Length.Y)
+                {
+                    var tempPosY = box.OUp.X * mean.X + box.OUp.Y * mean.Y + box.OUp.Z * mean.Z;
+                    for (int i = 0; i < triangles.Count; i++)
+                    {
+                        var triGroup = triangles[i];
+                        for (int j = 0; j < triGroup.tris.Count; j++)
+                        {
+                            var tri = triGroup.tris[j];
+                            Vector3 p0 = v[tri.P0[0] - 1], p1 = v[tri.P1[0] - 1], p2 = v[tri.P2[0] - 1];
+                            var center = new Vector3((Math.Min(Math.Min(p0.X, p1.X), p2.X) + Math.Max(Math.Max(p0.X, p1.X), p2.X)) / 2,
+                                                     (Math.Min(Math.Min(p0.Y, p1.Y), p2.Y) + Math.Max(Math.Max(p0.Y, p1.Y), p2.Y)) / 2,
+                                                     (Math.Min(Math.Min(p0.Z, p1.Z), p2.Z) + Math.Max(Math.Max(p0.Z, p1.Z), p2.Z)) / 2);
+                            var centerTempY = box.OUp.X * center.X + box.OUp.Y * center.Y + box.OUp.Z * center.Z;
+                            if (centerTempY < tempPosY)
+                                leftChild.Add(tri);
+                            else
+                                rightChild.Add(tri);
+                        }
+                    }
+                    AutoGenerateCBox(box.Leftchild, new List<(string, List<ObjTriangle>)> { (string.Empty, leftChild) });
+                    AutoGenerateCBox(box.Rightchild, new List<(string, List<ObjTriangle>)> { (string.Empty, rightChild) });
+                }
+                else
+                {
+                    var tempPosZ = box.OForward.X * mean.X + box.OForward.Y * mean.Y + box.OForward.Z * mean.Z;
+                    for (int i = 0; i < triangles.Count; i++)
+                    {
+                        var triGroup = triangles[i];
+                        for (int j = 0; j < triGroup.tris.Count; j++)
+                        {
+                            var tri = triGroup.tris[j];
+                            Vector3 p0 = v[tri.P0[0] - 1], p1 = v[tri.P1[0] - 1], p2 = v[tri.P2[0] - 1];
+                            var center = new Vector3((Math.Min(Math.Min(p0.X, p1.X), p2.X) + Math.Max(Math.Max(p0.X, p1.X), p2.X)) / 2,
+                                                     (Math.Min(Math.Min(p0.Y, p1.Y), p2.Y) + Math.Max(Math.Max(p0.Y, p1.Y), p2.Y)) / 2,
+                                                     (Math.Min(Math.Min(p0.Z, p1.Z), p2.Z) + Math.Max(Math.Max(p0.Z, p1.Z), p2.Z)) / 2);
+                            var centerTempZ = box.OForward.X * center.X + box.OForward.Y * center.Y + box.OForward.Z * center.Z;
+                            if (centerTempZ < tempPosZ)
+                                leftChild.Add(tri);
+                            else
+                                rightChild.Add(tri);
+                        }
+                    }
+                    AutoGenerateCBox(box.Leftchild, new List<(string, List<ObjTriangle>)> { (string.Empty, leftChild) });
+                    AutoGenerateCBox(box.Rightchild, new List<(string, List<ObjTriangle>)> { (string.Empty, rightChild) });
+                }
+            }
+        }
+
+        private void AllPca(CollisionBox box, List<Vector3> points, out Vector3 mean)
+        {
+            for (int i = 0; i < points.Count; i++)
+            {
+                try
+                {
+                    var p = points[i];
+                    box.Position.X += p.X;
+                    box.Position.Y += p.Y;
+                    box.Position.Z += p.Z;
+                }
+                catch { }
+            }
+            if (points.Count != 0)
+            {
+                box.Position /= points.Count;
+            }
+            mean = box.Position;
+            Vector3 covMatRow1 = Vector3.Zero, covMatRow2 = covMatRow1, covMatRow3 = covMatRow1;
+            for (int i = 0; i < points.Count; i++)
+            {
+                var point = points[i];
+                try
+                {
+                    var p = points[i];
+                    covMatRow1.X += (p.X - box.Position.X) * (p.X - box.Position.X);
+                    covMatRow1.Y += (p.X - box.Position.X) * (p.Y - box.Position.Y);
+                    covMatRow1.Z += (p.X - box.Position.X) * (p.Z - box.Position.Z);
+                    covMatRow2.Y += (p.Y - box.Position.Y) * (p.Y - box.Position.Y);
+                    covMatRow2.Z += (p.Y - box.Position.Y) * (p.Z - box.Position.Z);
+                    covMatRow3.Z += (p.Z - box.Position.Z) * (p.Z - box.Position.Z);
+                }
+                catch { }
+            }
+            if (points.Count != 0)
+            {
+                covMatRow1 /= points.Count;
+                covMatRow2 /= points.Count;
+                covMatRow3 /= points.Count;
+            }
+            //Symetry in the covariance matrix
+            covMatRow2.X = covMatRow1.Y;
+            covMatRow3.X = covMatRow1.Z;
+            covMatRow3.Y = covMatRow2.Z;
+            var eigenValues = MatrixEigenStuff.EigenValues(covMatRow1, covMatRow2, covMatRow3);
+            box.OCross = Vector3.Normalize(MatrixEigenStuff.EigenVector(covMatRow1, covMatRow2, eigenValues.X));
+            box.OUp = Vector3.Normalize(MatrixEigenStuff.EigenVector(covMatRow1, covMatRow2, eigenValues.Z));
+            box.OForward = Vector3.Cross(box.OCross, box.OUp);
+            Vector3 tempx = new Vector3(box.OCross.X, box.OUp.X, box.OForward.X),
+                    tempy = new Vector3(box.OCross.Y, box.OUp.Y, box.OForward.Y),
+                    tempz = new Vector3(box.OCross.Z, box.OUp.Z, box.OForward.Z);
+            float minx, miny, minz, maxx, maxy, maxz;
+            minx = miny = minz = float.MaxValue;
+            maxx = maxy = maxz = float.MinValue;
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                var point = points[i];
+                try
+                {
+                    var p = points[i];
+                    float vTempx = tempx.X * p.X + tempy.X * p.Y + tempz.X * p.Z,
+                          vTempy = tempx.Y * p.X + tempy.Y * p.Y + tempz.Y * p.Z,
+                          vTempz = tempx.Z * p.X + tempy.Z * p.Y + tempz.Z * p.Z;
+                    if (vTempx < minx)
+                        minx = vTempx;
+                    if (vTempy < miny)
+                        miny = vTempy;
+                    if (vTempz < minz)
+                        minz = vTempz;
+                    if (vTempx > maxx)
+                        maxx = vTempx;
+                    if (vTempy > maxy)
+                        maxy = vTempy;
+                    if (vTempz > maxz)
+                        maxz = vTempz;
+                }
+                catch { }
+            }
+
+            box.Position.X = (minx + maxx) / 2;
+            box.Position.Y = (miny + maxy) / 2;
+            box.Position.Z = (minz + maxz) / 2;
+            box.Length.X = (maxx - minx) / 2;
+            box.Length.Y = (maxy - miny) / 2;
+            box.Length.Z = (maxz - minz) / 2;
+            var tempPos = box.Position;
+            box.Position.X = box.OCross.X * tempPos.X + box.OUp.X * tempPos.Y + box.OForward.X * tempPos.Z;
+            box.Position.Y = box.OCross.Y * tempPos.X + box.OUp.Y * tempPos.Y + box.OForward.Y * tempPos.Z;
+            box.Position.Z = box.OCross.Z * tempPos.X + box.OUp.Z * tempPos.Y + box.OForward.Z * tempPos.Z;
         }
 
         private void ClearData()
