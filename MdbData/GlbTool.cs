@@ -13,6 +13,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using TPShipToolkit.MdbData.Classes;
 using TPShipToolkit.Structs;
 using TPShipToolkit.Utils;
@@ -142,6 +143,7 @@ namespace TPShipToolkit.MdbData
                     logs.Report("Reading " + glbPath + " ... ");
                     watch.Start();
                     var glbScene = SceneBuilder.LoadDefaultScene(glbPath);
+                    
                     var instances = new List<InstanceBuilder>();
                     foreach (var instance in glbScene.Instances)
                     {
@@ -550,11 +552,13 @@ namespace TPShipToolkit.MdbData
         {
             int instanceIndex = 0, ctCount = 0;
             float minX = 0, minY = 0, minZ = 0, maxX = 0, maxY = 0, maxZ = 0;
+            List<List<(int A, int B, int C)>> cTriangles = new();
+            var box = new CollisionBox();
             mdbWriter.Write(0);
             mdbWriter.Write(0);
             mdbWriter.Write(0);
             mdbWriter.Write(instances.Count());
-            foreach(var instance in instances)
+            foreach (var instance in instances)
             {
                 var mesh = instance.Content.GetGeometryAsset();
                 mdbWriter.Write(0);
@@ -570,7 +574,12 @@ namespace TPShipToolkit.MdbData
                         logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                         logs.Report($"Writing {instance.Name} triangles ... ");
                         watch.Restart();
-                        WriteTrianglesInstance0ToMdb(mdbWriter, mesh, materials, ref ctCount);
+                        WriteTrianglesInstance0ToMdb(mdbWriter, mesh, materials, cTriangles, ref ctCount);
+                        watch.Stop();
+                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                        logs.Report("Creating collision boxes from lod 0 ... "); // collision box from lod 0
+                        watch.Restart();
+                        AutoGenerateCBox(box, mesh, cTriangles);
                         watch.Stop();
                         logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                     }
@@ -614,6 +623,37 @@ namespace TPShipToolkit.MdbData
             mdbWriter.Write(posy);
             var diag = (float)Math.Sqrt(lenx * lenx + leny * leny + lenz * lenz) / 2;
             mdbWriter.Write(diag);
+            watch.Stop();
+            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+            var pos = mdbWriter.BaseStream.Position;
+            mdbWriter.Write(0);
+            mdbWriter.Write(1);
+            logs.Report("Writing collision boxes ... ");
+            watch.Restart();
+            WriteCollisionBox(mdbWriter, box, ctCount);
+            watch.Stop();
+            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+            mdbWriter.Write(17); //max level
+            mdbWriter.Write(5);
+            logs.Report("Writing hitbox ... ");
+            watch.Restart();
+
+            // Write hitbox
+
+            watch.Stop();
+            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+            var currentPos = mdbWriter.BaseStream.Position;
+            var blockLength0 = (int)(currentPos - pos);
+            logs.Report("Writing file length and strings ... ");
+            watch.Restart();
+            mdbWriter.Write(false);
+            mdbWriter.BaseStream.Seek(0, SeekOrigin.Begin);
+            mdbWriter.Write(currentPos + 1);
+            mdbWriter.Write((int)currentPos - 11);
+            mdbWriter.BaseStream.Seek(pos, SeekOrigin.Begin);
+            mdbWriter.Write(blockLength0);
+            mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+            WriteStrings(mdbWriter);
             watch.Stop();
             logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
         }
@@ -771,13 +811,14 @@ namespace TPShipToolkit.MdbData
             mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
         }
 
-        private void WriteTrianglesInstance0ToMdb(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh, IEnumerable<MaterialBuilder> materials, ref int ctCount)
+        private void WriteTrianglesInstance0ToMdb(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh, IEnumerable<MaterialBuilder> materials, List<List<(int A, int B, int C)>> cTriangles, ref int ctCount)
         {
-            int tCount = 0;
+            int tCount = 0, primIndex = 0;
             var tempPos = mdbWriter.BaseStream.Position;
             mdbWriter.Write(0); // tCount
             foreach (var prim in mesh.Primitives)
             {
+                cTriangles.Add(new());
                 ushort matIndex = 0, j = 0;
                 foreach (var mat in materials)
                 {
@@ -790,14 +831,16 @@ namespace TPShipToolkit.MdbData
                 }
                 for (int i = 0; i < prim.Triangles.Count; i++)
                 {
-                    var t = prim.Triangles[i];
+                    var (A, B, C) = prim.Triangles[i];
                     mdbWriter.Write(8);
-                    mdbWriter.Write((ushort)(t.C + tCount));
-                    mdbWriter.Write((ushort)(t.B + tCount));
-                    mdbWriter.Write((ushort)(t.A + tCount));
+                    mdbWriter.Write((ushort)(C + tCount));
+                    mdbWriter.Write((ushort)(B + tCount));
+                    mdbWriter.Write((ushort)(A + tCount));
                     mdbWriter.Write(matIndex);
+                    cTriangles[primIndex].Add((A, B, C));
                 }
                 tCount += prim.Triangles.Count;
+                primIndex += 1;
             }
             ctCount = tCount;
             mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
@@ -859,33 +902,168 @@ namespace TPShipToolkit.MdbData
             }
         }
 
-        private List<int> GetPointsFromCBoxGroup(List<(string matName, List<ObjTriangle> tris)> matGroups)
+        private void WriteCollisionBox(BinaryWriter mdbWriter, CollisionBox box, int collisionTriangles)
         {
-            List<int> points = new List<int>();
-            for (int i = 0; i < matGroups.Count; i++)
+            var pos = mdbWriter.BaseStream.Position;
+            mdbWriter.Write(0);
+            mdbWriter.Write(2);
+            mdbWriter.Write(72);
+            mdbWriter.Write(3);
+            mdbWriter.Write(box.Position.X);
+            mdbWriter.Write(-box.Position.Z);
+            mdbWriter.Write(box.Position.Y);
+            mdbWriter.Write(4);
+            mdbWriter.Write(0);
+            mdbWriter.Write(5);
+            mdbWriter.Write(box.OCross.X);
+            mdbWriter.Write(-box.OCross.Z);
+            mdbWriter.Write(box.OCross.Y);
+            mdbWriter.Write(6);
+            mdbWriter.Write(box.OUp.X);
+            mdbWriter.Write(-box.OUp.Z);
+            mdbWriter.Write(box.OUp.Y);
+            mdbWriter.Write(7);
+            mdbWriter.Write(box.OForward.X);
+            mdbWriter.Write(-box.OForward.Z);
+            mdbWriter.Write(box.OForward.Y);
+            mdbWriter.Write(8);
+            mdbWriter.Write(box.Length.X);
+            mdbWriter.Write(box.Length.Y);
+            mdbWriter.Write(box.Length.Z);
+            mdbWriter.Write(9);
+            mdbWriter.Write(Math.Max(Math.Max(box.Length.X, box.Length.Y), box.Length.Z));
+            mdbWriter.Write(10);
+            mdbWriter.Write(box.Level);
+            mdbWriter.Write(11);
+            if (box.Leftchild != null)
             {
-                var matGroup = matGroups[i];
-                for (int j = 0; j < matGroup.tris.Count; j++)
+                mdbWriter.Write(true);
+                mdbWriter.Write(12);
+                if (box.Rightchild != null)
                 {
-                    var tri = matGroup.tris[j];
-                    bool hasFoundP0, hasFoundP1, hasFoundP2;
-                    hasFoundP0 = hasFoundP1 = hasFoundP2 = false;
-                    for (int k = 0; k < points.Count; k++)
+                    mdbWriter.Write(true);
+                    mdbWriter.Write(13);
+                    WriteCollisionBox(mdbWriter, box.Leftchild, collisionTriangles);
+                    mdbWriter.Write(16);
+                    WriteCollisionBox(mdbWriter, box.Rightchild, collisionTriangles);
+                }
+                else
+                {
+                    mdbWriter.Write(false);
+                    mdbWriter.Write(13);
+                    WriteCollisionBox(mdbWriter, box.Leftchild, collisionTriangles);
+                }
+            }
+            else
+            {
+                mdbWriter.Write(false);
+                mdbWriter.Write(12);
+                if (box.Rightchild != null)
+                {
+                    mdbWriter.Write(true);
+                    mdbWriter.Write(16);
+                    WriteCollisionBox(mdbWriter, box.Rightchild, collisionTriangles);
+                }
+                else
+                {
+                    mdbWriter.Write(false);
+                }
+            }
+            mdbWriter.Write(14);
+            if (box.Level != 0)
+                mdbWriter.Write(0);
+            else
+            {
+                mdbWriter.Write(collisionTriangles);
+                for (int i = 0; i < collisionTriangles; i++)
+                {
+                    mdbWriter.Write(15);
+                    mdbWriter.Write(i);
+                }
+            }
+            var blockLength1 = (int)(mdbWriter.BaseStream.Position - pos);
+            mdbWriter.BaseStream.Seek(pos, SeekOrigin.Begin);
+            mdbWriter.Write(blockLength1 - 4);
+            mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+        }
+
+        private void WriteStrings(BinaryWriter mdbWriter)
+        {
+            mdbWriter.Write(21);
+            mdbWriter.Write(8);
+            mdbWriter.Write(Encoding.Default.GetBytes("MeshData"));
+            mdbWriter.Write(4);
+            mdbWriter.Write(Encoding.Default.GetBytes("Root"));
+            mdbWriter.Write(10);
+            mdbWriter.Write(Encoding.Default.GetBytes("LocalBasis"));
+            mdbWriter.Write(8);
+            mdbWriter.Write(Encoding.Default.GetBytes("Position"));
+            mdbWriter.Write(20);
+            mdbWriter.Write(Encoding.Default.GetBytes("LookAt Vector Length"));
+            mdbWriter.Write(19);
+            mdbWriter.Write(Encoding.Default.GetBytes("Orientation - Cross"));
+            mdbWriter.Write(21);
+            mdbWriter.Write(Encoding.Default.GetBytes("Orientation - Forward"));
+            mdbWriter.Write(16);
+            mdbWriter.Write(Encoding.Default.GetBytes("Orientation - Up"));
+            mdbWriter.Write(6);
+            mdbWriter.Write(Encoding.Default.GetBytes("Length"));
+            mdbWriter.Write(6);
+            mdbWriter.Write(Encoding.Default.GetBytes("Radius"));
+            mdbWriter.Write(5);
+            mdbWriter.Write(Encoding.Default.GetBytes("Level"));
+            mdbWriter.Write(12);
+            mdbWriter.Write(Encoding.Default.GetBytes("HasLeftChild"));
+            mdbWriter.Write(13);
+            mdbWriter.Write(Encoding.Default.GetBytes("HasRightChild"));
+            mdbWriter.Write(39);
+            mdbWriter.Write(Encoding.Default.GetBytes("Valid Collision Triangle Indices - Size"));
+            mdbWriter.Write(42);
+            mdbWriter.Write(Encoding.Default.GetBytes("Valid Collision Triangle Indices - Element"));
+            mdbWriter.Write(8);
+            mdbWriter.Write(Encoding.Default.GetBytes("MaxLevel"));
+            mdbWriter.Write(25);
+            mdbWriter.Write(Encoding.Default.GetBytes("CollisionTriangles - Size"));
+            mdbWriter.Write(28);
+            mdbWriter.Write(Encoding.Default.GetBytes("CollisionTriangles - Element"));
+            mdbWriter.Write(2);
+            mdbWriter.Write(Encoding.Default.GetBytes("P0"));
+            mdbWriter.Write(2);
+            mdbWriter.Write(Encoding.Default.GetBytes("P1"));
+            mdbWriter.Write(2);
+            mdbWriter.Write(Encoding.Default.GetBytes("P2"));
+
+        }
+
+        private List<List<int>> GetPointsFromCBoxGroup(List<List<(int A, int B, int C)>> cTriangles)
+        {
+            List<List<int>> points = new();
+            bool hasFoundP0, hasFoundP1, hasFoundP2;
+            hasFoundP0 = hasFoundP1 = hasFoundP2 = false;
+            for(int i = 0; i < cTriangles.Count; i++)
+            {
+                var pTriangleList = cTriangles[i];
+                var newPrimList = new List<int>();
+                points.Add(newPrimList);
+                for (int j = 0; j < pTriangleList.Count; j++)
+                {
+                    var (A, B, C) = pTriangleList[j];
+                    for (int k = 0; k < newPrimList.Count; k++)
                     {
-                        var p = points[k];
-                        if (p == tri.P0[0])
+                        var p = newPrimList[k];
+                        if (p == A)
                         {
                             hasFoundP0 = true;
                             if (hasFoundP0 && hasFoundP1 && hasFoundP2)
                                 break;
                         }
-                        if (p == tri.P1[0])
+                        if (p == B)
                         {
                             hasFoundP1 = true;
                             if (hasFoundP0 && hasFoundP1 && hasFoundP2)
                                 break;
                         }
-                        if (p == tri.P2[0])
+                        if (p == C)
                         {
                             hasFoundP2 = true;
                             if (hasFoundP0 && hasFoundP1 && hasFoundP2)
@@ -893,138 +1071,172 @@ namespace TPShipToolkit.MdbData
                         }
                     }
                     if (!hasFoundP0)
-                        points.Add(tri.P0[0]);
+                        newPrimList.Add(A);
                     if (!hasFoundP1)
-                        points.Add(tri.P1[0]);
+                        newPrimList.Add(B);
                     if (!hasFoundP2)
-                        points.Add(tri.P2[0]);
+                        newPrimList.Add(C);
                 }
             }
             return points;
         }
 
-        private void AutoGenerateCBox(CollisionBox box, List<(string matName, List<ObjTriangle> tris)> triangles)
+        private void AutoGenerateCBox(CollisionBox box, IMeshBuilder<MaterialBuilder> mesh, List<List<(int A, int B, int C)>> cTriangles)
         {
-            //var points = GetPointsFromCBoxGroup(triangles);
-            AllPca(box, points, out Vector3 mean);
+            var points = GetPointsFromCBoxGroup(cTriangles);
+            AllPca(box, mesh, points, out Vector3 mean);
             if (box.Level < 5)
             {
                 box.Leftchild = new CollisionBox() { Level = box.Level + 1 };
                 box.Rightchild = new CollisionBox() { Level = box.Level + 1 };
-                var leftChild = new List<ObjTriangle>();
-                var rightChild = new List<ObjTriangle>();
+                var leftChild = new List<List<(int A, int B, int C)>>();
+                var rightChild = new List<List<(int A, int B, int C)>>();
                 var maxLength = Math.Max(box.Length.X, Math.Max(box.Length.Y, box.Length.Z));
                 if (maxLength == box.Length.X)
                 {
                     var tempPosX = box.OCross.X * mean.X + box.OCross.Y * mean.Y + box.OCross.Z * mean.Z;
-                    for (int i = 0; i < triangles.Count; i++)
+                    for (int i = 0; i < cTriangles.Count; i++)
                     {
-                        var triGroup = triangles[i];
-                        for (int j = 0; j < triGroup.tris.Count; j++)
+                        var prim = mesh.Primitives.ElementAt(i);
+                        var cTriList = cTriangles[i];
+                        var leftNewPrimList = new List<(int A, int B, int C)>();
+                        var rightNewPrimList = new List<(int A, int B, int C)>();
+                        leftChild.Add(leftNewPrimList);
+                        rightChild.Add(rightNewPrimList);
+                        for (int j = 0; j < cTriList.Count; j++)
                         {
-                            var tri = triGroup.tris[j];
-                            Vector3 p0 = v[tri.P0[0] - 1], p1 = v[tri.P1[0] - 1], p2 = v[tri.P2[0] - 1];
+                            var tri = cTriList[j];
+                            Vector3 p0 = prim.Vertices[tri.A].GetGeometry().GetPosition();
+                            Vector3 p1 = prim.Vertices[tri.A].GetGeometry().GetPosition();
+                            Vector3 p2 = prim.Vertices[tri.A].GetGeometry().GetPosition();
                             var center = new Vector3((Math.Min(Math.Min(p0.X, p1.X), p2.X) + Math.Max(Math.Max(p0.X, p1.X), p2.X)) / 2,
                                                      (Math.Min(Math.Min(p0.Y, p1.Y), p2.Y) + Math.Max(Math.Max(p0.Y, p1.Y), p2.Y)) / 2,
                                                      (Math.Min(Math.Min(p0.Z, p1.Z), p2.Z) + Math.Max(Math.Max(p0.Z, p1.Z), p2.Z)) / 2);
                             var centerTempX = box.OCross.X * center.X + box.OCross.Y * center.Y + box.OCross.Z * center.Z;
                             if (centerTempX < tempPosX)
-                                leftChild.Add(tri);
+                                leftNewPrimList.Add(tri);
                             else
-                                rightChild.Add(tri);
+                                rightNewPrimList.Add(tri);
                         }
                     }
-                    AutoGenerateCBox(box.Leftchild, new List<(string, List<ObjTriangle>)> { (string.Empty, leftChild) });
-                    AutoGenerateCBox(box.Rightchild, new List<(string, List<ObjTriangle>)> { (string.Empty, rightChild) });
+                    AutoGenerateCBox(box.Leftchild, mesh, leftChild);
+                    AutoGenerateCBox(box.Rightchild, mesh, rightChild);
                 }
                 else if (maxLength == box.Length.Y)
                 {
                     var tempPosY = box.OUp.X * mean.X + box.OUp.Y * mean.Y + box.OUp.Z * mean.Z;
-                    for (int i = 0; i < triangles.Count; i++)
+                    for (int i = 0; i < cTriangles.Count; i++)
                     {
-                        var triGroup = triangles[i];
-                        for (int j = 0; j < triGroup.tris.Count; j++)
+                        var prim = mesh.Primitives.ElementAt(i);
+                        var cTriList = cTriangles[i];
+                        var leftNewPrimList = new List<(int A, int B, int C)>();
+                        var rightNewPrimList = new List<(int A, int B, int C)>();
+                        leftChild.Add(leftNewPrimList);
+                        rightChild.Add(rightNewPrimList);
+                        for (int j = 0; j < cTriList.Count; j++)
                         {
-                            var tri = triGroup.tris[j];
-                            Vector3 p0 = v[tri.P0[0] - 1], p1 = v[tri.P1[0] - 1], p2 = v[tri.P2[0] - 1];
+                            var tri = cTriList[j];
+                            Vector3 p0 = prim.Vertices[tri.A].GetGeometry().GetPosition();
+                            Vector3 p1 = prim.Vertices[tri.A].GetGeometry().GetPosition();
+                            Vector3 p2 = prim.Vertices[tri.A].GetGeometry().GetPosition();
                             var center = new Vector3((Math.Min(Math.Min(p0.X, p1.X), p2.X) + Math.Max(Math.Max(p0.X, p1.X), p2.X)) / 2,
                                                      (Math.Min(Math.Min(p0.Y, p1.Y), p2.Y) + Math.Max(Math.Max(p0.Y, p1.Y), p2.Y)) / 2,
                                                      (Math.Min(Math.Min(p0.Z, p1.Z), p2.Z) + Math.Max(Math.Max(p0.Z, p1.Z), p2.Z)) / 2);
                             var centerTempY = box.OUp.X * center.X + box.OUp.Y * center.Y + box.OUp.Z * center.Z;
                             if (centerTempY < tempPosY)
-                                leftChild.Add(tri);
+                                leftNewPrimList.Add(tri);
                             else
-                                rightChild.Add(tri);
+                                rightNewPrimList.Add(tri);
                         }
                     }
-                    AutoGenerateCBox(box.Leftchild, new List<(string, List<ObjTriangle>)> { (string.Empty, leftChild) });
-                    AutoGenerateCBox(box.Rightchild, new List<(string, List<ObjTriangle>)> { (string.Empty, rightChild) });
+                    AutoGenerateCBox(box.Leftchild, mesh, leftChild);
+                    AutoGenerateCBox(box.Rightchild, mesh, rightChild);
                 }
                 else
                 {
                     var tempPosZ = box.OForward.X * mean.X + box.OForward.Y * mean.Y + box.OForward.Z * mean.Z;
-                    for (int i = 0; i < triangles.Count; i++)
+                    for (int i = 0; i < cTriangles.Count; i++)
                     {
-                        var triGroup = triangles[i];
-                        for (int j = 0; j < triGroup.tris.Count; j++)
+                        var prim = mesh.Primitives.ElementAt(i);
+                        var cTriList = cTriangles[i];
+                        var leftNewPrimList = new List<(int A, int B, int C)>();
+                        var rightNewPrimList = new List<(int A, int B, int C)>();
+                        leftChild.Add(leftNewPrimList);
+                        rightChild.Add(rightNewPrimList);
+                        for (int j = 0; j < cTriList.Count; j++)
                         {
-                            var tri = triGroup.tris[j];
-                            Vector3 p0 = v[tri.P0[0] - 1], p1 = v[tri.P1[0] - 1], p2 = v[tri.P2[0] - 1];
+                            var tri = cTriList[j];
+                            Vector3 p0 = prim.Vertices[tri.A].GetGeometry().GetPosition();
+                            Vector3 p1 = prim.Vertices[tri.A].GetGeometry().GetPosition();
+                            Vector3 p2 = prim.Vertices[tri.A].GetGeometry().GetPosition();
                             var center = new Vector3((Math.Min(Math.Min(p0.X, p1.X), p2.X) + Math.Max(Math.Max(p0.X, p1.X), p2.X)) / 2,
                                                      (Math.Min(Math.Min(p0.Y, p1.Y), p2.Y) + Math.Max(Math.Max(p0.Y, p1.Y), p2.Y)) / 2,
                                                      (Math.Min(Math.Min(p0.Z, p1.Z), p2.Z) + Math.Max(Math.Max(p0.Z, p1.Z), p2.Z)) / 2);
                             var centerTempZ = box.OForward.X * center.X + box.OForward.Y * center.Y + box.OForward.Z * center.Z;
                             if (centerTempZ < tempPosZ)
-                                leftChild.Add(tri);
+                                leftNewPrimList.Add(tri);
                             else
-                                rightChild.Add(tri);
+                                rightNewPrimList.Add(tri);
                         }
                     }
-                    AutoGenerateCBox(box.Leftchild, new List<(string, List<ObjTriangle>)> { (string.Empty, leftChild) });
-                    AutoGenerateCBox(box.Rightchild, new List<(string, List<ObjTriangle>)> { (string.Empty, rightChild) });
+                    AutoGenerateCBox(box.Leftchild, mesh, leftChild);
+                    AutoGenerateCBox(box.Rightchild, mesh, rightChild);
                 }
             }
         }
 
-        private void AllPca(CollisionBox box, List<Vector3> points, out Vector3 mean)
+        private void AllPca(CollisionBox box, IMeshBuilder<MaterialBuilder> mesh, List<List<int>> points, out Vector3 mean)
         {
+            var pointsCount = 0;
             for (int i = 0; i < points.Count; i++)
             {
                 try
                 {
-                    var p = points[i];
-                    box.Position.X += p.X;
-                    box.Position.Y += p.Y;
-                    box.Position.Z += p.Z;
+                    var pList = points[i];
+                    var prim = mesh.Primitives.ElementAt(i);
+                    for (int j = 0; j < pList.Count; j++)
+                    {
+                        var p = pList[j];
+                        var v = prim.Vertices[p].GetGeometry().GetPosition();
+                        box.Position.X += v.X;
+                        box.Position.Y += v.Y;
+                        box.Position.Z += v.Z;
+                    }
+                    pointsCount += pList.Count;
                 }
                 catch { }
             }
-            if (points.Count != 0)
+            if (pointsCount != 0)
             {
-                box.Position /= points.Count;
+                box.Position /= pointsCount;
             }
             mean = box.Position;
             Vector3 covMatRow1 = Vector3.Zero, covMatRow2 = covMatRow1, covMatRow3 = covMatRow1;
             for (int i = 0; i < points.Count; i++)
             {
-                var point = points[i];
                 try
                 {
-                    var p = points[i];
-                    covMatRow1.X += (p.X - box.Position.X) * (p.X - box.Position.X);
-                    covMatRow1.Y += (p.X - box.Position.X) * (p.Y - box.Position.Y);
-                    covMatRow1.Z += (p.X - box.Position.X) * (p.Z - box.Position.Z);
-                    covMatRow2.Y += (p.Y - box.Position.Y) * (p.Y - box.Position.Y);
-                    covMatRow2.Z += (p.Y - box.Position.Y) * (p.Z - box.Position.Z);
-                    covMatRow3.Z += (p.Z - box.Position.Z) * (p.Z - box.Position.Z);
+                    var pList = points[i];
+                    var prim = mesh.Primitives.ElementAt(i);
+                    for (int j = 0; j < pList.Count; j++)
+                    {
+                        var p = pList[j];
+                        var v = prim.Vertices[p].GetGeometry().GetPosition();
+                        covMatRow1.X += (v.X - box.Position.X) * (v.X - box.Position.X);
+                        covMatRow1.Y += (v.X - box.Position.X) * (v.Y - box.Position.Y);
+                        covMatRow1.Z += (v.X - box.Position.X) * (v.Z - box.Position.Z);
+                        covMatRow2.Y += (v.Y - box.Position.Y) * (v.Y - box.Position.Y);
+                        covMatRow2.Z += (v.Y - box.Position.Y) * (v.Z - box.Position.Z);
+                        covMatRow3.Z += (v.Z - box.Position.Z) * (v.Z - box.Position.Z);
+                    }
                 }
                 catch { }
             }
-            if (points.Count != 0)
+            if (pointsCount != 0)
             {
-                covMatRow1 /= points.Count;
-                covMatRow2 /= points.Count;
-                covMatRow3 /= points.Count;
+                covMatRow1 /= pointsCount;
+                covMatRow2 /= pointsCount;
+                covMatRow3 /= pointsCount;
             }
             //Symetry in the covariance matrix
             covMatRow2.X = covMatRow1.Y;
@@ -1043,25 +1255,30 @@ namespace TPShipToolkit.MdbData
 
             for (int i = 0; i < points.Count; i++)
             {
-                var point = points[i];
                 try
                 {
-                    var p = points[i];
-                    float vTempx = tempx.X * p.X + tempy.X * p.Y + tempz.X * p.Z,
-                          vTempy = tempx.Y * p.X + tempy.Y * p.Y + tempz.Y * p.Z,
-                          vTempz = tempx.Z * p.X + tempy.Z * p.Y + tempz.Z * p.Z;
-                    if (vTempx < minx)
-                        minx = vTempx;
-                    if (vTempy < miny)
-                        miny = vTempy;
-                    if (vTempz < minz)
-                        minz = vTempz;
-                    if (vTempx > maxx)
-                        maxx = vTempx;
-                    if (vTempy > maxy)
-                        maxy = vTempy;
-                    if (vTempz > maxz)
-                        maxz = vTempz;
+                    var pList = points[i];
+                    var prim = mesh.Primitives.ElementAt(i);
+                    for (int j = 0; j < pList.Count; j++)
+                    {
+                        var p = pList[j];
+                        var v = prim.Vertices[p].GetGeometry().GetPosition();
+                        float vTempx = tempx.X * v.X + tempy.X * v.Y + tempz.X * v.Z,
+                              vTempy = tempx.Y * v.X + tempy.Y * v.Y + tempz.Y * v.Z,
+                              vTempz = tempx.Z * v.X + tempy.Z * v.Y + tempz.Z * v.Z;
+                        if (vTempx < minx)
+                            minx = vTempx;
+                        if (vTempy < miny)
+                            miny = vTempy;
+                        if (vTempz < minz)
+                            minz = vTempz;
+                        if (vTempx > maxx)
+                            maxx = vTempx;
+                        if (vTempy > maxy)
+                            maxy = vTempy;
+                        if (vTempz > maxz)
+                            maxz = vTempz;
+                    }
                 }
                 catch { }
             }
