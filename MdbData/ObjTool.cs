@@ -22,8 +22,6 @@ namespace TPShipToolkit.MdbData
         private List<Vector3> vn = new List<Vector3>();
         //groups, with group of material containing the triangles
         private List<(string groupName, List<(string matName, List<ObjTriangle> tris)> matGroups)> groups = new();
-        //groups with the collision boxes for each mesh
-        private List<(string meshName, CollisionBox parentBox)> cboxGroups = new();
 
         /// <summary>
         /// Converts 1 obj file to X mdb file (by using the groups/objects name).
@@ -607,15 +605,15 @@ namespace TPShipToolkit.MdbData
         private List<int> GetPointsFromCBoxGroup(List<(string matName, List<ObjTriangle> tris)> matGroups)
         {
             List<int> points = new List<int>();
-            for(int i=0;i<matGroups.Count;i++)
+            for (int i = 0; i < matGroups.Count; i++)
             {
                 var matGroup = matGroups[i];
-                for(int j=0;j<matGroup.tris.Count; j++)
+                for (int j = 0; j < matGroup.tris.Count; j++)
                 {
                     var tri = matGroup.tris[j];
                     bool hasFoundP0, hasFoundP1, hasFoundP2;
                     hasFoundP0 = hasFoundP1 = hasFoundP2 = false;
-                    for(int k=0;k<points.Count;k++)
+                    for (int k = 0; k < points.Count; k++)
                     {
                         var p = points[k];
                         if (p == tri.P0[0])
@@ -652,7 +650,7 @@ namespace TPShipToolkit.MdbData
         {
             var points = GetPointsFromCBoxGroup(triangles);
             AllPca(box, points, out Vector3 mean);
-            if (box.Level<5)
+            if (box.Level < 5)
             {
                 box.Leftchild = new CollisionBox() { Level = box.Level + 1 };
                 box.Rightchild = new CollisionBox() { Level = box.Level + 1 };
@@ -1166,7 +1164,7 @@ namespace TPShipToolkit.MdbData
             }
             var blockLength1 = (int)(mdbWriter.BaseStream.Position - pos);
             mdbWriter.BaseStream.Seek(pos, SeekOrigin.Begin);
-            mdbWriter.Write(blockLength1);
+            mdbWriter.Write(blockLength1 - 4);
             mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
         }
 
@@ -1274,7 +1272,6 @@ namespace TPShipToolkit.MdbData
             vt.Clear();
             vn.Clear();
             groups.Clear();
-            cboxGroups.Clear();
         }
     }
 }
