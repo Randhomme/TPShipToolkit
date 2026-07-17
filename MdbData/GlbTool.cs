@@ -172,7 +172,6 @@ namespace TPShipToolkit.MdbData
                     progress.Report(i + 1);
                 }
             }
-            
         }
 
         /// <summary>
@@ -450,15 +449,17 @@ namespace TPShipToolkit.MdbData
                 var meshModel = mdbMesh.MeshModels[i];
                 for (int j = 0; j < meshModel.MdbTriangles.Count; j++)
                 {
-                    var mdbTriangle = meshModel.MdbTriangles[j];
-                    if(mdbTriangle.TextureIndex < currentMdbMaterials.Count)
+                    var textureIndex = meshModel.MdbTriangles[j].TextureIndex;
+                    if(textureIndex < currentMdbMaterials.Count)
                     {
-                        var mat = currentMdbMaterials[mdbTriangle.TextureIndex];
+                        var mat = currentMdbMaterials[textureIndex];
                         for (ushort k = 0; k < finalMdbMaterials.Count; k++)
                         {
-                            if(mat.TextureName == finalMdbMaterials[k].TextureName)
+                            if(mat.MaterialName == finalMdbMaterials[k].MaterialName)
                             {
-                                mdbTriangle.TextureIndex = k;
+                                var mdbTriangle = meshModel.MdbTriangles[j];
+                                meshModel.MdbTriangles[j] = new(mdbTriangle.P0, mdbTriangle.P1, mdbTriangle.P2, k);
+                                //mdbTriangle.TextureIndex = k;
                                 break;
                             }
                         }
@@ -534,11 +535,11 @@ namespace TPShipToolkit.MdbData
                         var n2 = Vector3.Normalize(new Vector3((float)-Math.Sin(v2.NX), (float)Math.Sin(v2.NY), (float)-Math.Cos(v2.NX)));
                         var glbPrim = glbMesh.UsePrimitive(glbMaterials[mdbTriangle.TextureIndex]);
                         var p0 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                            (new(pos0, n0), new VertexColor1Texture1(new(v0.R / 255f, v0.G / 255f, v0.B / 255f, 1f), new(v0.U, -v0.V)));
+                            (new(pos0, n0), new VertexColor1Texture1(new(v0.R / 255f, v0.G / 255f, v0.B / 255f, v0.A / 255f), new(v0.U, v0.V)));
                         var p1 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                            (new(pos1, n1), new VertexColor1Texture1(new(v1.R / 255f, v1.G / 255f, v1.B / 255f, 1f), new(v1.U, -v1.V)));
+                            (new(pos1, n1), new VertexColor1Texture1(new(v1.R / 255f, v1.G / 255f, v1.B / 255f, v1.A / 255f), new(v1.U, v1.V)));
                         var p2 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
-                            (new(pos2, n2), new VertexColor1Texture1(new(v2.R / 255f, v2.G / 255f, v2.B / 255f, 1f), new(v2.U, -v2.V)));
+                            (new(pos2, n2), new VertexColor1Texture1(new(v2.R / 255f, v2.G / 255f, v2.B / 255f, v2.A / 255f), new(v2.U, v2.V)));
                         glbPrim.AddTriangle(p2, p1, p0);
                     }
                     glbScene.AddNode(glbNode);
@@ -550,9 +551,11 @@ namespace TPShipToolkit.MdbData
 
         private void WriteMdb(BinaryWriter mdbWriter, IEnumerable<InstanceBuilder> instances, IEnumerable<MaterialBuilder> materials, IProgress<string> logs, System.Diagnostics.Stopwatch watch)
         {
-            int instanceIndex = 0, ctCount = 0;
+            int instanceIndex = 0, ctCount = 0, blockLength0;
             float minX = 0, minY = 0, minZ = 0, maxX = 0, maxY = 0, maxZ = 0;
-            List<List<(int A, int B, int C)>> cTriangles = new();
+            long pos, currentPos = 0;
+            IMeshBuilder<MaterialBuilder> mesh0 = null;
+            List <List<(int A, int B, int C)>> cTriangles = new();
             var box = new CollisionBox();
             mdbWriter.Write(0);
             mdbWriter.Write(0);
@@ -561,7 +564,8 @@ namespace TPShipToolkit.MdbData
             foreach (var instance in instances)
             {
                 var mesh = instance.Content.GetGeometryAsset();
-                mdbWriter.Write(0);
+                pos = mdbWriter.BaseStream.Position;
+                mdbWriter.Write(0); // model length
                 mdbWriter.Write(instanceIndex);
                 if (mesh != null)
                 {
@@ -569,17 +573,13 @@ namespace TPShipToolkit.MdbData
                     watch.Restart();
                     if (instanceIndex == 0)
                     {
+                        mesh0 = mesh;
                         WriteVerticesInstance0ToMdb(mdbWriter, mesh, ref minX, ref minY, ref minZ, ref maxX, ref maxY, ref maxZ);
                         watch.Stop();
                         logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                         logs.Report($"Writing {instance.Name} triangles ... ");
                         watch.Restart();
                         WriteTrianglesInstance0ToMdb(mdbWriter, mesh, materials, cTriangles, ref ctCount);
-                        watch.Stop();
-                        logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-                        logs.Report("Creating collision boxes from lod 0 ... "); // collision box from lod 0
-                        watch.Restart();
-                        AutoGenerateCBox(box, mesh, cTriangles);
                         watch.Stop();
                         logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                     }
@@ -595,6 +595,11 @@ namespace TPShipToolkit.MdbData
                         logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
                     }
                     mdbWriter.Write(0); //potential animation count (or whatever this is)
+                    currentPos = mdbWriter.BaseStream.Position;
+                    blockLength0 = (int)(currentPos - pos);
+                    mdbWriter.BaseStream.Seek(pos, SeekOrigin.Begin);
+                    mdbWriter.Write(blockLength0 - 4);
+                    mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
                 }
                 instanceIndex += 1;
             }
@@ -625,28 +630,41 @@ namespace TPShipToolkit.MdbData
             mdbWriter.Write(diag);
             watch.Stop();
             logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-            var pos = mdbWriter.BaseStream.Position;
+            pos = mdbWriter.BaseStream.Position;
             mdbWriter.Write(0);
             mdbWriter.Write(1);
-            logs.Report("Writing collision boxes ... ");
-            watch.Restart();
-            WriteCollisionBox(mdbWriter, box, ctCount);
-            watch.Stop();
-            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-            mdbWriter.Write(17); //max level
-            mdbWriter.Write(5);
-            logs.Report("Writing hitbox ... ");
-            watch.Restart();
-
-            // Write hitbox
-
-            watch.Stop();
-            logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
-            var currentPos = mdbWriter.BaseStream.Position;
-            var blockLength0 = (int)(currentPos - pos);
+            if (mesh0 != null)
+            {
+                logs.Report("Creating collision boxes from lod 0 ... "); // collision box from lod 0
+                watch.Restart();
+                AutoGenerateCBox(box, mesh0, cTriangles);
+                watch.Stop();
+                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                logs.Report("Writing collision boxes ... ");
+                watch.Restart();
+                WriteCollisionBox(mdbWriter, box, ctCount);
+                watch.Stop();
+                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                mdbWriter.Write(17); //max level
+                mdbWriter.Write(5);
+                logs.Report("Writing hitbox ... ");
+                watch.Restart();
+                WriteHitbox(mdbWriter, mesh0);
+                watch.Stop();
+                logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+            }
+            else
+            {
+                logs.Report("WARNING: There is no mesh in your file for the collisions and the hitbox.\n");
+                WriteCollisionBox(mdbWriter, box, 0);
+                mdbWriter.Write(18);
+                mdbWriter.Write(0);
+            }
+            currentPos = mdbWriter.BaseStream.Position;
+            blockLength0 = (int)(currentPos - pos);
             logs.Report("Writing file length and strings ... ");
             watch.Restart();
-            mdbWriter.Write(false);
+            mdbWriter.Write(true); // Allows transparency ? It's the only result I've seen so far
             mdbWriter.BaseStream.Seek(0, SeekOrigin.Begin);
             mdbWriter.Write(currentPos + 1);
             mdbWriter.Write((int)currentPos - 11);
@@ -678,7 +696,7 @@ namespace TPShipToolkit.MdbData
                     mdbWriter.Write(-vPos.Z);
                     mdbWriter.Write(vPos.Y);
                     mdbWriter.Write(vTexPos.X);
-                    mdbWriter.Write(-vTexPos.Y);
+                    mdbWriter.Write(vTexPos.Y);
                     if (vGeom.TryGetNormal(out var vNorm))
                     {
                         if (vNorm.Y < -1)
@@ -744,7 +762,7 @@ namespace TPShipToolkit.MdbData
                     mdbWriter.Write(-vPos.Z);
                     mdbWriter.Write(vPos.Y);
                     mdbWriter.Write(vTexPos.X);
-                    mdbWriter.Write(-vTexPos.Y);
+                    mdbWriter.Write(vTexPos.Y);
                     if (vGeom.TryGetNormal(out var vNorm))
                     {
                         if (vNorm.Y < -1)
@@ -780,7 +798,7 @@ namespace TPShipToolkit.MdbData
 
         private void WriteTrianglesToMdb(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh, IEnumerable<MaterialBuilder> materials)
         {
-            int tCount = 0;
+            int tCount = 0, vCount = 0;
             var tempPos = mdbWriter.BaseStream.Position;
             mdbWriter.Write(0); // tCount
             foreach (var prim in mesh.Primitives)
@@ -788,7 +806,7 @@ namespace TPShipToolkit.MdbData
                 ushort matIndex = 0, j = 0;
                 foreach (var mat in materials)
                 {
-                    if (prim.Material == mat)
+                    if (prim.Material.Name == mat.Name)
                     {
                         matIndex = j;
                         break;
@@ -799,12 +817,13 @@ namespace TPShipToolkit.MdbData
                 {
                     var t = prim.Triangles[i];
                     mdbWriter.Write(8);
-                    mdbWriter.Write((ushort)(t.C + tCount));
-                    mdbWriter.Write((ushort)(t.B + tCount));
-                    mdbWriter.Write((ushort)(t.A + tCount));
+                    mdbWriter.Write((ushort)(t.C + vCount));
+                    mdbWriter.Write((ushort)(t.B + vCount));
+                    mdbWriter.Write((ushort)(t.A + vCount));
                     mdbWriter.Write(matIndex);
                 }
                 tCount += prim.Triangles.Count;
+                vCount += prim.Vertices.Count;
             }
             mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
             mdbWriter.Write(tCount);
@@ -813,7 +832,7 @@ namespace TPShipToolkit.MdbData
 
         private void WriteTrianglesInstance0ToMdb(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh, IEnumerable<MaterialBuilder> materials, List<List<(int A, int B, int C)>> cTriangles, ref int ctCount)
         {
-            int tCount = 0, primIndex = 0;
+            int tCount = 0, vCount = 0, primIndex = 0;
             var tempPos = mdbWriter.BaseStream.Position;
             mdbWriter.Write(0); // tCount
             foreach (var prim in mesh.Primitives)
@@ -833,13 +852,14 @@ namespace TPShipToolkit.MdbData
                 {
                     var (A, B, C) = prim.Triangles[i];
                     mdbWriter.Write(8);
-                    mdbWriter.Write((ushort)(C + tCount));
-                    mdbWriter.Write((ushort)(B + tCount));
-                    mdbWriter.Write((ushort)(A + tCount));
+                    mdbWriter.Write((ushort)(C + vCount));
+                    mdbWriter.Write((ushort)(B + vCount));
+                    mdbWriter.Write((ushort)(A + vCount));
                     mdbWriter.Write(matIndex);
                     cTriangles[primIndex].Add((A, B, C));
                 }
                 tCount += prim.Triangles.Count;
+                vCount += prim.Vertices.Count;
                 primIndex += 1;
             }
             ctCount = tCount;
@@ -987,6 +1007,42 @@ namespace TPShipToolkit.MdbData
             mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
         }
 
+        private void WriteHitbox(BinaryWriter mdbWriter, IMeshBuilder<MaterialBuilder> mesh)
+        {
+            mdbWriter.Write(18);
+            var tempPos = mdbWriter.BaseStream.Position;
+            int htCount = 0;
+            mdbWriter.Write(0); // vCount
+            foreach (var prim in mesh.Primitives)
+            {
+                for (int i = 0; i < prim.Triangles.Count; i++)
+                {
+                    var t = prim.Triangles[i];
+                    var p0 = prim.Vertices[t.C].GetGeometry().GetPosition();
+                    var p1 = prim.Vertices[t.B].GetGeometry().GetPosition();
+                    var p2 = prim.Vertices[t.A].GetGeometry().GetPosition();
+                    mdbWriter.Write(19);
+                    mdbWriter.Write(48);
+                    mdbWriter.Write(20);
+                    mdbWriter.Write(p0.X);
+                    mdbWriter.Write(-p0.Z);
+                    mdbWriter.Write(p0.Y);
+                    mdbWriter.Write(21);
+                    mdbWriter.Write(p1.X);
+                    mdbWriter.Write(-p1.Z);
+                    mdbWriter.Write(p1.Y);
+                    mdbWriter.Write(22);
+                    mdbWriter.Write(p2.X);
+                    mdbWriter.Write(-p2.Z);
+                    mdbWriter.Write(p2.Y);
+                }
+                htCount += prim.Triangles.Count;
+            }
+            mdbWriter.BaseStream.Seek(tempPos, SeekOrigin.Begin);
+            mdbWriter.Write(htCount);
+            mdbWriter.BaseStream.Seek(0, SeekOrigin.End);
+        }
+
         private void WriteStrings(BinaryWriter mdbWriter)
         {
             mdbWriter.Write(21);
@@ -1038,8 +1094,6 @@ namespace TPShipToolkit.MdbData
         private List<List<int>> GetPointsFromCBoxGroup(List<List<(int A, int B, int C)>> cTriangles)
         {
             List<List<int>> points = new();
-            bool hasFoundP0, hasFoundP1, hasFoundP2;
-            hasFoundP0 = hasFoundP1 = hasFoundP2 = false;
             for(int i = 0; i < cTriangles.Count; i++)
             {
                 var pTriangleList = cTriangles[i];
@@ -1047,6 +1101,8 @@ namespace TPShipToolkit.MdbData
                 points.Add(newPrimList);
                 for (int j = 0; j < pTriangleList.Count; j++)
                 {
+                    bool hasFoundP0, hasFoundP1, hasFoundP2;
+                    hasFoundP0 = hasFoundP1 = hasFoundP2 = false;
                     var (A, B, C) = pTriangleList[j];
                     for (int k = 0; k < newPrimList.Count; k++)
                     {
@@ -1054,19 +1110,19 @@ namespace TPShipToolkit.MdbData
                         if (p == A)
                         {
                             hasFoundP0 = true;
-                            if (hasFoundP0 && hasFoundP1 && hasFoundP2)
+                            if (hasFoundP1 && hasFoundP2)
                                 break;
                         }
                         if (p == B)
                         {
                             hasFoundP1 = true;
-                            if (hasFoundP0 && hasFoundP1 && hasFoundP2)
+                            if (hasFoundP0 && hasFoundP2)
                                 break;
                         }
                         if (p == C)
                         {
                             hasFoundP2 = true;
-                            if (hasFoundP0 && hasFoundP1 && hasFoundP2)
+                            if (hasFoundP0 && hasFoundP1)
                                 break;
                         }
                     }
