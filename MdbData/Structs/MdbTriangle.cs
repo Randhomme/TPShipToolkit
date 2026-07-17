@@ -14,5 +14,10 @@
             P2 = p2;
             TextureIndex = textureIndex;
         }
+
+        public override string ToString()
+        {
+            return $"{P0}, {P1}, {P2}";
+        }
     }
 }
