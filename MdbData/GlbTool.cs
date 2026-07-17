@@ -702,7 +702,7 @@ namespace TPShipToolkit.MdbData
             blockLength0 = (int)(currentPos - pos);
             logs.Report("Writing file length and strings ... ");
             watch.Restart();
-            mdbWriter.Write(true); // Allows transparency ? It's the only result I've seen so far
+            mdbWriter.Write(false); // true allows correct transparency (over nebula and objects), but breaks hitbox
             mdbWriter.BaseStream.Seek(0, SeekOrigin.Begin);
             mdbWriter.Write(currentPos + 1);
             mdbWriter.Write((int)currentPos - 11);
