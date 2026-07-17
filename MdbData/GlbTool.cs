@@ -184,7 +184,45 @@ namespace TPShipToolkit.MdbData
         /// <param name="logs">Logs in the text box.</param>
         public void XGlbToXMdb(string[] glbs, string mdbFolderPath, IProgress<int> progress, IProgress<string> logs)
         {
+            for (int i = 0; i < glbs.Length; i++)
+            {
+                var glbPath = glbs[i];
+                try
+                {
+                    var watch = new System.Diagnostics.Stopwatch();
+                    logs.Report("Reading " + glbPath + " ... ");
+                    watch.Start();
+                    var glbScene = SceneBuilder.LoadDefaultScene(glbPath);
 
+                    var instances = new List<InstanceBuilder>();
+                    foreach (var instance in glbScene.Instances)
+                    {
+                        instances.Add(instance);
+                    }
+                    instances.Sort((x, y) => NaturalStringComparer.CompareNatural(x.Name, y.Name));
+                    var groupedInstances = instances.GroupBy((i)=>true);
+                    watch.Stop();
+                    logs.Report("Done in " + TimeSpanFormat.Get(watch.Elapsed) + "\n");
+                    foreach (var group in groupedInstances)
+                    {
+                        var mdbFileName = Path.GetFileNameWithoutExtension(glbPath) + ".mdb";
+                        var mdbPath = Path.Combine(mdbFolderPath, mdbFileName);
+                        logs.Report("\n---- " + mdbFileName + " ----\n");
+                        using (var mdbWriter = new BinaryWriter(File.Open(mdbPath, FileMode.Create)))
+                        {
+                            WriteMdb(mdbWriter, group, glbScene.Materials, logs, watch);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logs.Report(ex.Message);
+                }
+                finally
+                {
+                    progress.Report(i + 1);
+                }
+            }
         }
 
         Vector3 NormalFromAngles(float theta, float phi)
