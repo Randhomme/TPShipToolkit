@@ -271,6 +271,7 @@ namespace TPShipToolkit.MsbData
                         writer.Write(2);
                         var rootId = 0;
                         // Find the first root node or mesh
+                        bool foundRoot = false;
                         //nodes loop
                         for (int i = 0; i < nodescount; i++)
                         {
@@ -278,17 +279,21 @@ namespace TPShipToolkit.MsbData
                             if (GetNewParentId(node) == -1)
                             {
                                 rootId = i;
+                                foundRoot = true;
                                 break;
                             }
                         }
                         //meshes loop
-                        for (int i = 0; i < meshescount; i++)
+                        if (!foundRoot)
                         {
-                            var mesh = _meshes[i];
-                            if (GetNewParentId(mesh) == -1)
+                            for (int i = 0; i < meshescount; i++)
                             {
-                                rootId = i + nodescount;
-                                break;
+                                var mesh = _meshes[i];
+                                if (GetNewParentId(mesh) == -1)
+                                {
+                                    rootId = i + nodescount;
+                                    break;
+                                }
                             }
                         }
                         writer.Write(rootId);
