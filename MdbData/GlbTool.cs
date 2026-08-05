@@ -3,7 +3,6 @@ using SharpGLTF.Geometry;
 using SharpGLTF.Geometry.VertexTypes;
 using SharpGLTF.Materials;
 using SharpGLTF.Scenes;
-using SharpGLTF.Schema2;
 using StbImageWriteSharp;
 using System;
 using System.Collections.Generic;
@@ -12,10 +11,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using TPShipToolkit.MdbData.Classes;
-using TPShipToolkit.Structs;
 using TPShipToolkit.Utils;
 
 namespace TPShipToolkit.MdbData
@@ -241,11 +237,11 @@ namespace TPShipToolkit.MdbData
 
             switch (dds.Format)
             {
-                case Pfim.ImageFormat.Rgba32:
+                case ImageFormat.Rgba32:
                     rgba = FixBgraToRgba(dds.Data);
                     break;
 
-                case Pfim.ImageFormat.Rgb24:
+                case ImageFormat.Rgb24:
                     rgba = new byte[dds.Width * dds.Height * 4];
 
                     for (int i = 0, j = 0; i < dds.Data.Length; i += 3, j += 4)
