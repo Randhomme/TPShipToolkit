@@ -168,7 +168,9 @@
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(555, 68);
             this.label6.TabIndex = 1;
-            this.label6.Text = resources.GetString("label6.Text");
+            this.label6.Text = "Export the obj groups/objects to the corresponding mdb.\n" +
+            "For exemple : NavyManOWarShip_Layer1_1 and NavyManOWarShip_Layer1_2 will be exported to NavyManOWarShip_Layer1.mdb. " +
+            "This allows you to quickly create the different layers from one single obj file, and it supports lod (level of details).";
             // 
             // flowLayoutPanel4
             // 
