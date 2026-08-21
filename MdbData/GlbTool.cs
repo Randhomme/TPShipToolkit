@@ -221,13 +221,9 @@ namespace TPShipToolkit.MdbData
             }
         }
 
-        Vector3 NormalFromAngles(float theta, float phi)
+        Vector3 NormalFromAngles(float yaw, float pitch)
         {
-            float x = (float)(Math.Cos(phi) * Math.Cos(theta));
-            float y = (float)Math.Sin(phi);
-            float z = (float)(Math.Cos(phi) * Math.Sin(theta));
-
-            return new Vector3(x, z, -y);
+            return new Vector3((float)(-Math.Sin(yaw) * Math.Cos(pitch)), (float)Math.Sin(pitch), (float)(-Math.Cos(yaw) * Math.Cos(pitch)));
         }
 
         private byte[] ConvertDdsToPngBytes(string ddsPath)
@@ -561,12 +557,9 @@ namespace TPShipToolkit.MdbData
                         var pos0 = new Vector3(v0.X, v0.Z, -v0.Y);
                         var pos1 = new Vector3(v1.X, v1.Z, -v1.Y);
                         var pos2 = new Vector3(v2.X, v2.Z, -v2.Y);
-                        //var n0 = NormalFromAngles(v0.NX, v0.NY);
-                        //var n1 = NormalFromAngles(v1.NX, v1.NY);
-                        //var n2 = NormalFromAngles(v2.NX, v2.NY);
-                        var n0 = Vector3.Normalize(new Vector3((float)-Math.Sin(v0.NX), (float)Math.Sin(v0.NY), (float)-Math.Cos(v0.NX)));
-                        var n1 = Vector3.Normalize(new Vector3((float)-Math.Sin(v1.NX), (float)Math.Sin(v1.NY), (float)-Math.Cos(v1.NX)));
-                        var n2 = Vector3.Normalize(new Vector3((float)-Math.Sin(v2.NX), (float)Math.Sin(v2.NY), (float)-Math.Cos(v2.NX)));
+                        var n0 = NormalFromAngles(v0.NX, v0.NY);
+                        var n1 = NormalFromAngles(v1.NX, v1.NY);
+                        var n2 = NormalFromAngles(v2.NX, v2.NY);
                         var glbPrim = glbMesh.UsePrimitive(glbMaterials[mdbTriangle.TextureIndex]);
                         var p0 = new VertexBuilder<VertexPositionNormal, VertexColor1Texture1, VertexEmpty>
                             (new(pos0, n0), new VertexColor1Texture1(new(v0.R / 255f, v0.G / 255f, v0.B / 255f, v0.A / 255f), new(v0.U, v0.V)));
