@@ -52,7 +52,7 @@ namespace TPShipToolkit.MsbData
             }
         }
 
-        [Description("The real name of this element, used in the mesh scene file.")]
+        [Description("The real name of this element, used in the mesh scene file.\nYou can use the name 'ENVIRONMENT' to make the animation play automatically.")]
         public string RealName { get; set; }
 
         [Description("The total duration of the animation.")]
